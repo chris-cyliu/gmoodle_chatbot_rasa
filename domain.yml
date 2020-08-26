@@ -1,0 +1,238 @@
+intents:
+  - greet
+  - goodbye
+  - affirm
+  - deny
+  - mood_great
+  - mood_unhappy
+  - bot_challenge
+  - gmoodle_class_attendance_enquiry
+  - gmoodle_quiz_count_enquiry
+  - gmoodle_quiz_dates_enquiry
+  - gmoodle_assignment_deadline_enquiry
+  - gmoodle_elearning_date_enquiry
+  - gmoodle_course_schedule_enquiry
+  - gmoodle_class_activity_on_lesson_N_enquiry
+  - gmoodle_task_missed_on_lesson_N_enquiry
+  - gmoodle_class_rank_enquiry
+  - gmoodle_groupmates_name_enquiry
+  - gmoodle_form_group_deadline_enquiry
+  - gmoodle_group_presentation_datetime_enquiry
+  - gmoodle_next_assignment_deadline_enquiry
+  - gmoodle_lesson_next_week_enquiry
+  - gmoodle_tutor_contact_enquiry
+  - gmoodle_topics_lesson_N_enquiry
+  - gmoodle_group_info_enquiry
+  #- gmoodle_groupmate_contact_enquiry (merge with gmoodle_groupmates_name_enquiry)
+  #- gmoodle_course_grade_enquiry
+  - gmoodle_discussion_participation_enquiry
+  #- gmoodle_forum_miss_response_topic_enquiry
+  - gmoodle_course_learning_resource_update_enquiry
+  - gmoodle_course_learning_resource_on_specific_topic_enquiry
+  #- gmoodle_past_average_score_enquiry
+  #- gmoodle_past_course_feedback_enquiry
+  - gmoodle_assignment_submit_method_enquiry
+  - gmoodle_start_discussion_method_enquiry
+  - gmoodle_reply_discussion_method_enquiry
+  - gmoodle_course_assignment_count_enquiry
+  - gmoodle_discussion_reply_by_pic_video_method_enquiry
+  - gmoodle_assignment_pct_mix_enquiry
+  - gmoodle_online_lesson_activity_enquiry
+  - gmoodle_get_lecture_notes_pdf_with_title_enquiry
+  - gmoodle_task_completion_enquiry
+  - gmoodle_reply_student_post_enquiry
+  - gmoodle_last_lesson_datetime_enquiry
+  - gmoodle_new_task_enquiry
+  - gmoodle_upload_filesize_max_enquiry
+  - gmoodle_course_instructor_enquiry
+  - gmoodle_lesson_zoom_link_enquiry
+  - gmoodle_lesson_material_enquiry
+  - gmoodle_last_lesson_material_enquiry
+  - gmoodle_wiki_contribution_comparison_with_groupmate_enquiry
+  - gmoodle_wiki_contribution_comparison_with_overall_enquiry
+  - gmoodle_forum_raise_question_enquiry
+  - gmoodle_postreply_attach_media_method_enquiry
+  - gmoodle_group_vacancy_enquiry
+  - gmoodle_replied_post_update_enquiry
+  - gmoodle_created_post_update_enquiry
+  - gmoodle_group_ranking_enquiry
+  - gmoodle_group_active_performance_enquiry
+  - gmoodle_missed_resource_enquiry
+  - gmoodle_groupmates_login_enquiry
+  - gmoodle_lecturer_office_enquiry
+  - gmoodle_forum_media_resolution_adjustment_method_enquiry
+  - gmoodle_change_profile_method
+  - gmoodle_topic_difficulties_enquiry
+  - gmoodle_topic_material_enquiry
+  - gmoodle_class_student_count_enquiry
+  - gmoodle_class_student_contact_enquiry
+  - gmoodle_class_student_major_distribution_enquiry
+  - gmoodle_freq_question_asked_enuiry
+  - gmoodle_content_display_problem_solution_enquiry
+  - gmoodle_video_display_problem_solution_enquiry
+  - gmoodle_lecture_time_enquiry
+  - gmoodle_last_lecture_datetime_enquiry
+  - gmoodle_course_important_date_enquiry
+  - gmoodle_semester_lastday_enquiry
+  - gmoodle_post_reply_by_specific_student_count_enquiry
+  - gmoodle_post_reply_by_specific_student_enquiry
+  - gmoodle_student_contact_enquiry
+  - gmoodle_material_search_enquiry
+  - gmoodle_class_activity_count_highest_enquiry
+  - gmoodle_assignment_grade_enquiry
+  - gmoodle_weekly_performance_enquiry
+  - gmoodle_change_password_method_enquiry
+  - gmoodle_material_recommendation_enquiry
+  - gmoodle_customdata_enquiry
+
+
+responses:
+  utter_greet:
+  - text: "Hey! How are you?"
+
+  utter_cheer_up:
+  - text: "Here is something to cheer you up:"
+    image: "https://i.imgur.com/nGF1K8f.jpg"
+
+  utter_did_that_help:
+  - text: "Did that help you?"
+
+  utter_happy:
+  - text: "Great, carry on!"
+
+  utter_goodbye:
+  - text: "Bye"
+
+  utter_iamabot:
+  - text: "I am a bot, powered by Rasa."
+
+  utter_class_cnt_attend:
+  - text: 'You have attend 3 classes. Good job!'
+
+  utter_change_gmoodle_pw_method:
+  - text: 'Click your name at the top right corner > choose "Preferences" > click "Change Password"'
+
+  utter_change_gmoodle_personalprofile_method:
+  - text: 'Click the top-right corner icon -> select profile -> edit profile'
+  
+  utter_gmoodle_question_detected:
+  - text: 'Gmoodle question detected. Answer to be given soon!'
+
+actions:
+  - action_hello_world
+  - action_get_class_attendance
+  - action_get_quiz_count
+  - action_get_quiz_dates
+  - action_get_assignment_deadline
+  - action_get_elearning_dates
+  - action_get_course_schedule
+  - action_get_class_activity_lesson_n
+  - action_get_task_missed_lesson_n
+  - action_get_class_rank
+  - action_get_groupmates_name
+  - action_get_formgroup_deadline
+  - action_get_group_presentation_datetime
+  - action_get_next_assignment_deadline
+  - action_get_next_week_lesson_datetime
+  - action_get_tutor_info
+  - action_get_lesson_n_topic
+  - action_get_group_info
+  - action_get_groupmates_contact
+  - action_get_course_grade
+  - action_get_course_discussion_participation
+  - action_get_missed_topic_discussion
+  - action_get_course_learning_resource_update
+  - action_get_course_learning_resource_topic_n
+  - action_get_course_past_average_score
+  - action_get_course_past_feedback
+  - action_get_assignment_submit_method
+  - action_get_start_discussion_method
+  - action_get_reply_discussion_method
+  - action_get_assignment_count
+  - action_get_reply_discussion_by_media_method
+  - action_get_assignment_pct_mix
+  - action_get_online_lesson_activity
+  - action_get_lecture_notes_pdf
+  - action_get_task_completion
+  - action_get_reply_post_student
+  - action_get_last_lesson_datetime
+  - action_get_new_task
+  - action_get_upload_filesize_max
+  - action_get_course_instructor
+  - action_get_zoom_link
+  - action_get_lesson_material
+  - action_get_last_lesson_material
+  - action_get_wiki_contribution_comparison_with_groupmate
+  - action_get_wiki_contribution_comparison_with_overall
+  - action_get_forum_raise_question_method
+  - action_get_forum_post_reply_attach_method_method
+  - action_get_group_vacany
+  - action_get_replied_post_update
+  - action_get_created_post_update
+  - action_get_group_ranking
+  - action_get_group_active_performance
+  - action_get_missed_resource
+  - action_get_groupmate_login_info
+  - action_get_lecturer_office
+  - action_get_forum_media_resolution_adjustment_method
+  - action_get_change_profile_method
+  - action_get_topic_difficulties
+  - action_get_topic_material
+  - action_get_class_student_count
+  - action_get_class_student_contact
+  - action_get_class_student_major_distribution
+  - action_get_freq_question_asked
+  - action_get_content_display_problem_solution
+  - action_get_video_display_problem_solution
+  - action_get_lecture_time
+  - action_get_last_lecture_datetime
+  - action_get_course_important_date
+  - action_get_semester_lastday
+  - action_get_post_reply_by_specific_student_count
+  - action_get_post_reply_by_specific_student
+  - action_get_student_contact
+  - action_get_course_material
+  - action_get_class_activity_count_highest
+  - action_get_assignment_grade
+  - action_get_weekly_performace
+  - action_get_change_password_method
+  - action_get_material_recommendation
+  - action_get_customdata
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true
