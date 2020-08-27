@@ -180,15 +180,13 @@
 - how can I find my tutor through email/phone?
 - I want to contact the tutor by email/phone.
 
-<!-->
 ## intent:gmoodle_topics_lesson_N_enquiry
-- what is the topic of lesson N?
-- what is lesson N about ?
-- what is the content of lesson N?
-- what is the title of lesson N?
-- Please show me the brief introduction of lesson N.
-- what is the theme of lesson N?
--->
+- what is the topic of lesson [1](CARDINAL)?
+- what is lesson [1](CARDINAL) about ?
+- what is the content of lesson [1](CARDINAL)?
+- what is the title of lesson [1](CARDINAL)?
+- Please show me the brief introduction of lesson [1](CARDINAL).
+- what is the theme of lesson [1](CARDINAL)?
 
 ## intent:gmoodle_group_info_enquiry
 - what is my group number / name?
@@ -422,15 +420,13 @@ Merge with gmoodle_tutor_contact_enquiry
 - do you know the link to the upcoming Zoom class?
 - what is the link for the upcoming Zoom lesson?
 
-<!--
 ## intent:gmoodle_lesson_material_enquiry
-- what are the materials for lesson N?
-- could you list out the materials for lesson N?
-- what are the learning materials for lesson N?
-- for lesson N, what are the course materials?
-- any course materials for lesson N?
-- i want to see all the materials of lesson N
--->
+- what are the materials for lesson [1](CARDINAL)?
+- could you list out the materials for lesson [1](CARDINAL)?
+- what are the learning materials for lesson [1](CARDINAL)?
+- for lesson [1](CARDINAL), what are the course materials?
+- any course materials for lesson [1](CARDINAL)?
+- i want to see all the materials of lesson [1](CARDINAL)
 
 ## intent:gmoodle_last_lesson_material_enquiry
 - what are the materials for the last lesson? 
@@ -544,6 +540,7 @@ Merge with gmoodle_replied_post_update_enquiry
 - did all my groupmates login this week?
 - did all the people in my group login in this week?
 - did all the people in my group login to Gmoodle this week?
+-->
 
 ## intent:gmoodle_lecturer_office_enquiry
 - where is the lecturer's office?
@@ -552,7 +549,6 @@ Merge with gmoodle_replied_post_update_enquiry
 - where’s the instructor’s office?
 - where is the location of the lecturer's office?
 - where is the location of the instructor's office?
--->
 
 ## intent:gmoodle_forum_media_resolution_adjustment_method_enquiry
 - how to adjust the image or video resolution in discussion forum?
@@ -726,15 +722,16 @@ Merge with gmoodle_course_learning_resource_on_specific_topic_enquiry
 - top gmoodle score. 
 - the best gmoodle score in class. 
 
-<!--
+
 ## intent:gmoodle_assignment_grade_enquiry
-- what is my grade for the assignment N?
-- how is my performance in the assignment N?
-- I wanna know my grade for the assignment N.
-- how well did I perform in the assignment N?
-- am I doing well in the assignment N?
-- show my grade for the assignment N. 
- 
+- what is my grade for the assignment [1](CARDINAL)?
+- how is my performance in the assignment [1](CARDINAL)?
+- I wanna know my grade for the assignment [1](CARDINAL).
+- how well did I perform in the assignment [1](CARDINAL)?
+- am I doing well in the assignment [1](CARDINAL)?
+- show my grade for the assignment [1](CARDINAL). 
+
+ <!--
 ## intent:gmoodle_weekly_performance_enquiry
 - what is my weekly average performance in line chart?
 - how’s my performance this week compared to the average? 

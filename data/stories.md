@@ -83,6 +83,10 @@
 * gmoodle_tutor_contact_enquiry
   - action_get_tutor_info
 
+## gmoodle_topics_lesson_N_enquiry_path
+* gmoodle_topics_lesson_N_enquiry
+  - action_get_lesson_n_topic
+
 ## gmoodle_group_info_enquiry_path
 * gmoodle_group_info_enquiry
   - action_get_group_info
@@ -137,6 +141,9 @@
 * gmoodle_lesson_zoom_link_enquiry
   - action_get_zoom_link  
 
+## gmoodle_lesson_material_enquiry_path
+* gmoodle_lesson_material_enquiry
+  - action_get_lesson_material  
 
 ## gmoodle_last_lesson_material_enquiry_path
 * gmoodle_last_lesson_material_enquiry
@@ -162,6 +169,10 @@
 ## gmoodle_group_active_performance_enquiry_path
 * gmoodle_group_active_performance_enquiry
   - action_get_group_active_performance
+
+## gmoodle_lecturer_office_enquiry_path
+* gmoodle_lecturer_office_enquiry
+  - action_get_lecturer_office
 
 ## gmoodle_forum_media_resolution_adjustment_method_enquiry_path
 * gmoodle_forum_media_resolution_adjustment_method_enquiry
@@ -194,6 +205,10 @@
 ## gmoodle_class_activity_count_highest_enquiry_path
 * gmoodle_class_activity_count_highest_enquiry
   - action_get_class_activity_count_highest
+
+## gmoodle_assignment_grade_enquiry_path
+* gmoodle_assignment_grade_enquiry
+  - action_get_assignment_grade
 
 ## gmoodle_change_password_method_enquiry_path
 * gmoodle_change_password_method_enquiry
