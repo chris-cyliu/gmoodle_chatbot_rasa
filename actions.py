@@ -15,6 +15,7 @@ from rasa_sdk.executor import CollectingDispatcher
 import mysql.connector
 import json
 from datetime import datetime
+import logging
 
 class ActionHelloWorld(Action):
 
@@ -52,44 +53,43 @@ class ActionHelloWorld(Action):
 def sql_query_result(sql_query):
 
 	mydb = mysql.connector.connect(
-		host="fafaoc.net",
+		host="gmoodle",
 		user="root",
 		password="gmoodle_123",
 		database="moodle"
 	)
-	
+
 	mydb_cursor = mydb.cursor()
 	mydb_cursor.execute(sql_query)
 	query_result = mydb_cursor.fetchall()
-	
 	return [list(i) for i in query_result]
-	
+
 
 def process_incoming_message(tracker):
-	#print(json.dumps(tracker.latest_message))
+	#logging.error(json.dumps(tracker.latest_message))
 	sender_id = (tracker.current_state())["sender_id"]
 	events = tracker.current_state()['events']
 	user_events = []
 	for e in events:
 		if e['event'] == 'user':
 			user_events.append(e)
-	
+
 	custom_data = user_events[-1]['metadata']
-	
+
 	intent_detected = tracker.latest_message['intent']
 	intent_detected_name = intent_detected['name']
 	intent_detected_confidence = intent_detected['confidence']
-	
+
 	intent_ranking = list(tracker.latest_message['intent_ranking'])[0:5]
-	
-	print("sender_id: " + sender_id)
-	print(intent_detected)
-	#print("Intent detected: " + intent_detected_name)
-	#print("Intent confidence: " + str(intent_detected_confidence))
-	#print(json.dumps(intent_ranking))
-	#print("Custom Data:")
-	#print(custom_data)
-	#print("course_id: " + course_id)
+
+	logging.error("sender_id: " + sender_id)
+	logging.error(intent_detected)
+	#logging.error("Intent detected: " + intent_detected_name)
+	#logging.error("Intent confidence: " + str(intent_detected_confidence))
+	#logging.error(json.dumps(intent_ranking))
+	#logging.error("Custom Data:")
+	#logging.error(custom_data)
+	#logging.error("course_id: " + course_id)
 
 def get_user_id(tracker):
 	try:
@@ -97,31 +97,31 @@ def get_user_id(tracker):
 		for e in events:
 			if e['event'] == 'user':
 				user_events.append(e)
-		
+
 		custom_data = user_events[-1]['metadata']
 		user_id = custom_data['user_id']
 	except:
-		print("Error in getting user_id")
+		logging.error("Error in getting user_id")
 		return 0
 	else:
 		return user_id
-	
+
 def get_course_id(tracker):
 	try:
 		user_events = []
 		for e in events:
 			if e['event'] == 'user':
 				user_events.append(e)
-		
+
 		custom_data = user_events[-1]['metadata']
 		course_id = custom_data['course_id']
 	except:
-		print("Error in getting course_id")
+		logging.error("Error in getting course_id")
 		return 0
 	else:
 		return course_id
-	
-	
+
+
 class ActionGetClassAttendance(Action):
 
 	def name(self) -> Text:
@@ -140,16 +140,16 @@ class ActionGetClassAttendance(Action):
 							JOIN mdl_course AS c on ctx.instanceid = c.id \
 							WHERE rn.shortname = 'student' \
 							AND u.id = {}".format(user_id)
-							
+
 		query_result = sql_query_result(sql_query)
 		class_attend_cnt = query_result[0][0]
-		
+
 		if(class_attend_cnt <= 1):
 			dispatcher.utter_message(text="You have attended {} class.".format(class_attend_cnt))
 		else:
 			dispatcher.utter_message(text="You have attended {} classes.".format(class_attend_cnt))
 		return []
-		
+
 class ActionGetQuizCount(Action):
 
 	def name(self) -> Text:
@@ -158,23 +158,23 @@ class ActionGetQuizCount(Action):
 	def run(self, dispatcher: CollectingDispatcher,
 			tracker: Tracker,
 			domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-		
+
 		process_incoming_message(tracker)
 		course_id = get_course_id(tracker)
 		sql_query = "SELECT COUNT(1) as cnt \
 					FROM mdl_quiz q \
 					WHERE q.course = {}".format(course_id)
-					
+
 		query_result = sql_query_result(sql_query)
 		quiz_cnt = query_result[0][0]
-		
+
 		if(quiz_cnt <= 1):
 			dispatcher.utter_message(text="There is {} quiz.".format(quiz_cnt))
 		else:
 			dispatcher.utter_message(text="There are {} quizzes.".format(quiz_cnt))
 		return []
 
-		
+
 class ActionGetQuizDates(Action):
 
 	def name(self) -> Text:
@@ -206,10 +206,10 @@ class ActionGetQuizDates(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = ""
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -219,7 +219,7 @@ class ActionGetQuizDates(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -233,7 +233,7 @@ class ActionGetQuizDates(Action):
 		dispatcher.utter_message(attachment=output_carousel)
 
 		return []
-		
+
 class ActionGetAssignmentDeadline(Action):
 
 	def name(self) -> Text:
@@ -266,10 +266,10 @@ class ActionGetAssignmentDeadline(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/mod/assign/view.php?id={}".format(assignment_id_tmp)
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -279,7 +279,7 @@ class ActionGetAssignmentDeadline(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -291,9 +291,9 @@ class ActionGetAssignmentDeadline(Action):
 		dispatcher.utter_message(text="Assignment Deadline are at...")
 		dispatcher.utter_message(attachment=output_carousel)
 
-		return []		
-			
-		
+		return []
+
+
 class ActionGetElearningDates(Action):
 
 	def name(self) -> Text:
@@ -328,10 +328,10 @@ class ActionGetElearningDates(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/mod/assign/view.php?id={}".format(elearning_id_tmp)
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -341,7 +341,7 @@ class ActionGetElearningDates(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -352,8 +352,8 @@ class ActionGetElearningDates(Action):
 
 		dispatcher.utter_message(text="E-learning date are at...")
 		dispatcher.utter_message(attachment=output_carousel)
-		return []		
-			
+		return []
+
 class ActionGetCourseSchedule(Action):
 
 	def name(self) -> Text:
@@ -386,10 +386,10 @@ class ActionGetCourseSchedule(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/mod/assign/view.php?id={}".format(schedule_id_tmp)
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -399,7 +399,7 @@ class ActionGetCourseSchedule(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -407,12 +407,12 @@ class ActionGetCourseSchedule(Action):
 								"elements": caurosel_elements
 							}
 						  }
-						  
+
 		dispatcher.utter_message(text="This is the course schedule")
 		dispatcher.utter_message(attachment=output_carousel)
 
-		return []		
-			
+		return []
+
 class ActionGetClassActivityLessonN(Action):
 
 	def name(self) -> Text:
@@ -445,10 +445,10 @@ class ActionGetClassActivityLessonN(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/mod/assign/view.php?id={}".format(classactivity_id_tmp)
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -458,7 +458,7 @@ class ActionGetClassActivityLessonN(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -470,8 +470,8 @@ class ActionGetClassActivityLessonN(Action):
 		dispatcher.utter_message(text="Class activity on lesson N")
 		dispatcher.utter_message(attachment=output_carousel)
 
-		return []		
-		
+		return []
+
 class ActionGetTaskMissedLessonN(Action):
 
 	def name(self) -> Text:
@@ -483,7 +483,7 @@ class ActionGetTaskMissedLessonN(Action):
 
 		dispatcher.utter_message(text="Task missed on lesson N")
 		process_incoming_message(tracker)
-		return []	
+		return []
 
 class ActionGetClassRank(Action):
 
@@ -510,7 +510,7 @@ class ActionGetClassRank(Action):
 
 		if(len(query_result))> 0:
 			student_ranking = query_result[0][1]
-		
+
 			dispatcher.utter_message(text="You rank {} in the class".format(str(student_ranking)))
 		else:
 			dispatcher.utter_message(text="No ranking for you in the class")
@@ -551,9 +551,9 @@ class ActionGetGroupmatesName(Action):
 				image_url_tmp = "/user/pix.php/{}/f1.jpg".format(str(groupmate_id_tmp))
 				button_title_tmp = "Go to Student Profile"
 				button_url_tmp = "/user/view.php?id={}&course={}".format(str(groupmate_id_tmp), str(course_id))
-				
+
 				caurosel_element = {
-									"title": title_tmp, 
+									"title": title_tmp,
 									"subtitle": subtitle_tmp,
 									"image_url": image_url_tmp,
 									"buttons": [{
@@ -563,7 +563,7 @@ class ActionGetGroupmatesName(Action):
 											}]
 									}
 				caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -571,9 +571,9 @@ class ActionGetGroupmatesName(Action):
 								"elements": caurosel_elements
 							}
 						  }
-		
-		
-		
+
+
+
 		#text_separator = " , "
 		#dispatcher.utter_message(text="Your groupmates id are {}".format(text_separator.join([str(x) for x in groupmate_list])))
 		if(len(caurosel_elements) > 0):
@@ -657,10 +657,10 @@ class ActionGetNextAssignmentDeadline(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/mod/assign/view.php?id={}".format(assignment_id_tmp)
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -670,7 +670,7 @@ class ActionGetNextAssignmentDeadline(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -716,10 +716,10 @@ class ActionGetNextWeekLessonDatetime(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/mod/lesson/view.php?id={}".format(lesson_id_tmp)
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -729,7 +729,7 @@ class ActionGetNextWeekLessonDatetime(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -776,10 +776,10 @@ class ActionGetTutorInfo(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/user/view.php?id={}&course={}".format(tutor_id_tmp, course_id)
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -789,7 +789,7 @@ class ActionGetTutorInfo(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -905,10 +905,10 @@ class ActionGetCourseDiscussionParticipation(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/mod/forum/discuss.php?d={}".format(discussion_id_tmp)
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -918,7 +918,7 @@ class ActionGetCourseDiscussionParticipation(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -980,9 +980,9 @@ class ActionGetCourseLearningResourceUpdate(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "".format(resource_id_tmp)
-			
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -992,7 +992,7 @@ class ActionGetCourseLearningResourceUpdate(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -1017,7 +1017,7 @@ class ActionGetCourseLearningResourceTopicN(Action):
 
 		dispatcher.utter_message(text="Here is the course learning resource for topic N...")
 		process_incoming_message(tracker)
-		return []	
+		return []
 
 '''
 class ActionGetCoursePastAverageScore(Action):
@@ -1031,8 +1031,8 @@ class ActionGetCoursePastAverageScore(Action):
 
 		dispatcher.utter_message(text="This course past avg. score is ...")
 		process_incoming_message(tracker)
-		return []		
-		
+		return []
+
 class ActionGetCoursePastFeedback(Action):
 
 	def name(self) -> Text:
@@ -1044,7 +1044,7 @@ class ActionGetCoursePastFeedback(Action):
 
 		dispatcher.utter_message(text="This course past avg. feedback score is ...")
 		process_incoming_message(tracker)
-		return []		
+		return []
 '''
 
 
@@ -1078,9 +1078,9 @@ class ActionGetAssignmentSubmitMethod(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/mod/assign/view.php?id={}".format(assignment_id_tmp)
-			
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -1090,7 +1090,7 @@ class ActionGetAssignmentSubmitMethod(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -1101,8 +1101,8 @@ class ActionGetAssignmentSubmitMethod(Action):
 
 		dispatcher.utter_message(text="Please go to the assignment submission pages")
 		dispatcher.utter_message(attachment=output_carousel)
-		return []		
-		
+		return []
+
 class ActionGetStartDiscussionMethod(Action):
 
 	def name(self) -> Text:
@@ -1133,9 +1133,9 @@ class ActionGetStartDiscussionMethod(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "".format(forum_id_tmp)
-			
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -1145,7 +1145,7 @@ class ActionGetStartDiscussionMethod(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -1157,8 +1157,8 @@ class ActionGetStartDiscussionMethod(Action):
 		dispatcher.utter_message(text="Here is the list of forum of this course")
 		dispatcher.utter_message(attachment=output_carousel)
 		dispatcher.utter_message(text="You can start the discussion by pressing \'Add a new discussion topic\'")
-		return []	
-		
+		return []
+
 class ActionGetReplyDiscussionMethod(Action):
 
 	def name(self) -> Text:
@@ -1189,9 +1189,9 @@ class ActionGetReplyDiscussionMethod(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "".format(forum_id_tmp)
-			
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -1201,7 +1201,7 @@ class ActionGetReplyDiscussionMethod(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -1213,8 +1213,8 @@ class ActionGetReplyDiscussionMethod(Action):
 		dispatcher.utter_message(text="Here is the list of forum of this course")
 		dispatcher.utter_message(attachment=output_carousel)
 		dispatcher.utter_message(text="You can reply the discussion by pressing \'Reply\'")
-		return []		
-		
+		return []
+
 class ActionGetAssignmentCount(Action):
 
 	def name(self) -> Text:
@@ -1237,8 +1237,8 @@ class ActionGetAssignmentCount(Action):
 
 		dispatcher.utter_message(text="Number of assignment")
 		dispatcher.utter_message(text=str(assignment_count))
-		return []		
-		
+		return []
+
 class ActionGetReplyDiscussionByMediaMethod(Action):
 
 	def name(self) -> Text:
@@ -1250,8 +1250,8 @@ class ActionGetReplyDiscussionByMediaMethod(Action):
 
 		dispatcher.utter_message(text="To reply discussion with pic/video, you can...")
 		process_incoming_message(tracker)
-		return []	
-		
+		return []
+
 class ActionGetAssignmentPctMix(Action):
 
 	def name(self) -> Text:
@@ -1263,8 +1263,8 @@ class ActionGetAssignmentPctMix(Action):
 
 		dispatcher.utter_message(text="The percentage of assignment is...")
 		process_incoming_message(tracker)
-		return []	
-		
+		return []
+
 class ActionGetOnlineLessonActivity(Action):
 
 	def name(self) -> Text:
@@ -1276,8 +1276,8 @@ class ActionGetOnlineLessonActivity(Action):
 
 		dispatcher.utter_message(text="Here is activity for online lesson...")
 		process_incoming_message(tracker)
-		return []	
-		
+		return []
+
 class ActionGetLectureNotesPDF(Action):
 
 	def name(self) -> Text:
@@ -1298,6 +1298,7 @@ class ActionGetLectureNotesPDF(Action):
 
 		query_result = sql_query_result(sql_query)
 
+		logging.error(str(course_id) + "\n")
 		material_list = []
 		caurosel_elements = []
 		for x in query_result:
@@ -1309,9 +1310,9 @@ class ActionGetLectureNotesPDF(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = "/mod/resource/view.php?id={}".format(material_id_tmp)
-			
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -1321,7 +1322,7 @@ class ActionGetLectureNotesPDF(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -1332,8 +1333,8 @@ class ActionGetLectureNotesPDF(Action):
 
 		dispatcher.utter_message(text="Here is lecture notes pdf...")
 		dispatcher.utter_message(attachment=output_carousel)
-		return []		
-		
+		return []
+
 class ActionGetTaskCompletion(Action):
 
 	def name(self) -> Text:
@@ -1356,9 +1357,9 @@ class ActionGetTaskCompletion(Action):
 
 		dispatcher.utter_message(text="Participation Rate")
 		dispatcher.utter_message(text="{0:.1%}".format(participate_rate))
-		
-		return []		
-			
+
+		return []
+
 class ActionGetReplyPostStudent(Action):
 
 	def name(self) -> Text:
@@ -1370,8 +1371,8 @@ class ActionGetReplyPostStudent(Action):
 
 		dispatcher.utter_message(text="Who have replied my post? The answer is...")
 		process_incoming_message(tracker)
-		return []		
-		
+		return []
+
 class ActionGetLastLessonDatetime(Action):
 
 	def name(self) -> Text:
@@ -1431,7 +1432,7 @@ class ActionGetUploadFilesizeMax(Action):
 		dispatcher.utter_message(text="You can upload file is max size...")
 		dispatcher.utter_message(text="1GB")
 		process_incoming_message(tracker)
-		return []	
+		return []
 
 '''
 class ActionGetCourseInstructor(Action):
@@ -1445,7 +1446,7 @@ class ActionGetCourseInstructor(Action):
 
 		dispatcher.utter_message(text="Your course instructor is...Chris")
 		process_incoming_message(tracker)
-		return []	
+		return []
 '''
 
 class ActionGetZoomLink(Action):
@@ -1461,7 +1462,7 @@ class ActionGetZoomLink(Action):
 		course_id = get_course_id(tracker)
 		sql_query = "SELECT cm.id cm_id, l.name, TRIM(Trailing '\"' FROM regexp_substr(l.intro, \"https://.*\\\"\")) link FROM mdl_lesson l \
 					JOIN mdl_modules m ON m.name = \"lesson\" \
-					JOIN mdl_course_modules cm ON cm.module = m.id AND cm.instance = l.id AND cm.visible=1 \
+					JOIN mdl_course_modules cm ON cm.module = m.id AND cm.instance = l.id AND cm.visible=1 AND cm.course = {}\
 					JOIN moodle.mdl_tag_instance ti ON ti.itemid = cm.id \
 					JOIN mdl_tag t ON ti.tagid = t.id AND t.name=\"online\" \
 					WHERE l.available > unix_timestamp(now()) \
@@ -1482,9 +1483,9 @@ class ActionGetZoomLink(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = lesson_zoom_link_tmp
-			
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -1494,7 +1495,7 @@ class ActionGetZoomLink(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -1506,8 +1507,8 @@ class ActionGetZoomLink(Action):
 		dispatcher.utter_message(text="The zoom link is...")
 		dispatcher.utter_message(attachment=output_carousel)
 
-		return []	
-			
+		return []
+
 class ActionGetLessonMaterial(Action):
 
 	def name(self) -> Text:
@@ -1519,8 +1520,8 @@ class ActionGetLessonMaterial(Action):
 
 		dispatcher.utter_message(text="Get Lesson Material")
 		process_incoming_message(tracker)
-		return []	
-		
+		return []
+
 class ActionGetLastLessonMaterial(Action):
 
 	def name(self) -> Text:
@@ -1553,8 +1554,8 @@ class ActionGetLastLessonMaterial(Action):
 		else:
 			dispatcher.utter_message(text="You can check out the materials through [here](/course/view.php?id={}#section-{})".format(course_id, section_id))
 
-		return []		
-		
+		return []
+
 class ActionGetWikiContributionComparisonWithGroupmate(Action):
 
 	def name(self) -> Text:
@@ -1591,8 +1592,8 @@ class ActionGetWikiContributionComparisonWithGroupmate(Action):
 		else:
 			dispatcher.utter_message(text="No Rank for you")
 
-		return []		
-		
+		return []
+
 class ActionGetWikiContributionComparisonWithOverall(Action):
 
 	def name(self) -> Text:
@@ -1628,7 +1629,7 @@ class ActionGetWikiContributionComparisonWithOverall(Action):
 		else:
 			dispatcher.utter_message(text="No Rank for you")
 
-		return []		
+		return []
 
 '''
 class ActionGetForumRaiseQuestionMethod(Action):
@@ -1642,7 +1643,7 @@ class ActionGetForumRaiseQuestionMethod(Action):
 
 		dispatcher.utter_message(text="GetForumRaiseQuestionMethod")
 		process_incoming_message(tracker)
-		return []		
+		return []
 
 class ActionGetForumPostReplyAttachMediaMethod(Action):
 
@@ -1655,7 +1656,7 @@ class ActionGetForumPostReplyAttachMediaMethod(Action):
 
 		dispatcher.utter_message(text="GetForumPostReplyAttachMediaMethod")
 		process_incoming_message(tracker)
-		return []		
+		return []
 '''
 
 class ActionGetGroupVacany(Action):
@@ -1692,7 +1693,7 @@ class ActionGetGroupVacany(Action):
 		else:
 			dispatcher.utter_message(text="No group still have vacancies")
 
-		return []		
+		return []
 
 class ActionGetRepliedPostUpdate(Action):
 
@@ -1705,7 +1706,7 @@ class ActionGetRepliedPostUpdate(Action):
 
 		dispatcher.utter_message(text="GetRepliedPostUpdate")
 		process_incoming_message(tracker)
-		return []		
+		return []
 
 '''
 class ActionGetCreatedPostUpdate(Action):
@@ -1719,7 +1720,7 @@ class ActionGetCreatedPostUpdate(Action):
 
 		dispatcher.utter_message(text="GetCreatedPostUpdate")
 		process_incoming_message(tracker)
-		return []	
+		return []
 '''
 
 class ActionGetGroupRanking(Action):
@@ -1752,7 +1753,7 @@ class ActionGetGroupRanking(Action):
 		else:
 			dispatcher.utter_message(text="You have no group/your group have no ranking")
 
-		return []	
+		return []
 
 class ActionGetGroupActivePerformance(Action):
 
@@ -1809,7 +1810,7 @@ class ActionGetGroupActivePerformance(Action):
 			dispatcher.utter_message(text="{} is the most active in the group".format(most_active_user_name))
 			dispatcher.utter_message(text="{} is the least active in the group".format(least_active_user_name))
 
-		return []	
+		return []
 
 class ActionGetMissedResource(Action):
 
@@ -1822,8 +1823,8 @@ class ActionGetMissedResource(Action):
 
 		dispatcher.utter_message(text="ActionGetMissedResource")
 		process_incoming_message(tracker)
-		return []	
-		
+		return []
+
 class ActionGetGroupmateLoginInfo(Action):
 
 	def name(self) -> Text:
@@ -1835,7 +1836,7 @@ class ActionGetGroupmateLoginInfo(Action):
 
 		dispatcher.utter_message(text="ActionGetGroupmateLoginInfo")
 		process_incoming_message(tracker)
-		return []	
+		return []
 
 class ActionGetLecturerOffice(Action):
 
@@ -1848,7 +1849,7 @@ class ActionGetLecturerOffice(Action):
 
 		dispatcher.utter_message(text="ActionGetLecturerOffice")
 		process_incoming_message(tracker)
-		return []	
+		return []
 
 class ActionGetForumMediaResolutionAdjustmentMethod(Action):
 
@@ -1861,7 +1862,7 @@ class ActionGetForumMediaResolutionAdjustmentMethod(Action):
 
 		dispatcher.utter_message(text="After clicking the image/video insert button on moodle, you can edit the size (e.g. 300 x 200), the image/video resolution can be adjusted for better illustration")
 		process_incoming_message(tracker)
-		return []	
+		return []
 
 class ActionGetChangeProfileMethod(Action):
 
@@ -1874,7 +1875,7 @@ class ActionGetChangeProfileMethod(Action):
 
 		dispatcher.utter_message(text="Click the top-right corner icon -> select profile -> edit profile")
 		process_incoming_message(tracker)
-		return []	
+		return []
 
 class ActionGetTopicDifficulties(Action):
 
@@ -1903,7 +1904,7 @@ class ActionGetTopicDifficulties(Action):
 			dispatcher.utter_message(text="{}".format(most_diff_topic_name))
 		else:
 			dispatcher.utter_message(text="No ans at this moment")
-		return []	
+		return []
 
 '''
 class ActionGetTopicMaterial(Action):
@@ -1917,7 +1918,7 @@ class ActionGetTopicMaterial(Action):
 
 		dispatcher.utter_message(text="ActionGetTopicMaterial")
 		process_incoming_message(tracker)
-		return []	
+		return []
 '''
 
 class ActionGetClassStudentCount(Action):
@@ -1950,7 +1951,7 @@ class ActionGetClassStudentCount(Action):
 			dispatcher.utter_message(text="{}".format(class_student_cnt))
 		else:
 			dispatcher.utter_message(text="No ans at this moment")
-		return []	
+		return []
 
 class ActionGetClassStudentContact(Action):
 
@@ -1967,7 +1968,7 @@ class ActionGetClassStudentContact(Action):
 
 		dispatcher.utter_message(text="You can check the student information [here](/user/index.php?id={})".format(course_id))
 
-		return []	
+		return []
 
 '''
 class ActionGetClassStudentMajorDistribution(Action):
@@ -1981,7 +1982,7 @@ class ActionGetClassStudentMajorDistribution(Action):
 
 		dispatcher.utter_message(text="ActionGetClassStudentMajorDistribution")
 		process_incoming_message(tracker)
-		return []	
+		return []
 '''
 
 class ActionGetFreqQuestionAsked(Action):
@@ -1995,7 +1996,7 @@ class ActionGetFreqQuestionAsked(Action):
 
 		dispatcher.utter_message(text="ActionGetFreqQuestionAsked")
 		process_incoming_message(tracker)
-		return []	
+		return []
 
 '''
 class ActionGetContentDisplayProblemSolution(Action):
@@ -2009,7 +2010,7 @@ class ActionGetContentDisplayProblemSolution(Action):
 
 		dispatcher.utter_message(text="ActionGetContentDisplayProblemSolution")
 		process_incoming_message(tracker)
-		return []	
+		return []
 
 class ActionGetVideoDisplayProblemSolution(Action):
 
@@ -2022,7 +2023,7 @@ class ActionGetVideoDisplayProblemSolution(Action):
 
 		dispatcher.utter_message(text="ActionGetVideoDisplayProblemSolution")
 		process_incoming_message(tracker)
-		return []	
+		return []
 '''
 
 class ActionGetLectureTime(Action):
@@ -2061,10 +2062,10 @@ class ActionGetLectureTime(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = ""
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -2074,7 +2075,7 @@ class ActionGetLectureTime(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -2088,7 +2089,7 @@ class ActionGetLectureTime(Action):
 			dispatcher.utter_message(attachment=output_carousel)
 		else:
 			dispatcher.utter_message(text="No ans at this moment")
-		return []	
+		return []
 
 '''
 class ActionGetLastLectureDatetime(Action):
@@ -2142,10 +2143,10 @@ class ActionGetCourseImportantDate(Action):
 			image_url_tmp = ""
 			button_title_tmp = "Go to Link"
 			button_url_tmp = event_url_tmp
-			
-			
+
+
 			caurosel_element = {
-								"title": title_tmp, 
+								"title": title_tmp,
 								"subtitle": subtitle_tmp,
 								"image_url": image_url_tmp,
 								"buttons": [{
@@ -2155,7 +2156,7 @@ class ActionGetCourseImportantDate(Action):
 										}]
 								}
 			caurosel_elements.append(caurosel_element)
-			
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -2266,7 +2267,7 @@ class ActionGetClassActivityCountHighest(Action):
 			dispatcher.utter_message(text="{}".format(activities_cnt))
 		else:
 			dispatcher.utter_message(text="No ans at this moment")
-		return []	
+		return []
 
 class ActionGetAssignmentGrade(Action):
 
@@ -2311,17 +2312,17 @@ class ActionGetMaterialRecommendation(Action):
 
 	def name(self) -> Text:
 		return "action_get_material_recommendation"
-	
+
 	def get_recommendation_rule_json(self, course_id):
 		sql_query = "select * from mdl_eduhk_chatbot_rules where course_id = {}".format(course_id)
 		query_result = sql_query_result(sql_query)
-		
+
 		if(len(query_result) > 0):
 			course_recommendation_json = query_result[0][2]
 			return course_recommendation_json
 		else:
 			return -1
-		
+
 	def get_user_reading_count(self, user_id, course_id):
 		sql_query = "SELECT COUNT(distinct(cm.id)) as reading_cnt FROM moodle.mdl_eduhk_score es \
 					JOIN mdl_course_modules cm ON es.cm_id = cm.id \
@@ -2331,14 +2332,14 @@ class ActionGetMaterialRecommendation(Action):
 					AND es.user_id = {}".format(course_id, user_id)
 
 		query_result = sql_query_result(sql_query)
-		
+
 		if(len(query_result) > 0):
 			reading_count = query_result[0][0]
 			return reading_count
 		else:
-			print("Error in getting reading count for user {} in course {}".format(str(user_id), str(course_id)))
+			logging.error("Error in getting reading count for user {} in course {}".format(str(user_id), str(course_id)))
 			return -1
-	
+
 	def get_user_quiz_grade(self, user_id, course_oid):
 		sql_query = "select d.grade \
 					from mdl_course_modules a \
@@ -2349,14 +2350,14 @@ class ActionGetMaterialRecommendation(Action):
 					and d.userid = {}".format(course_oid, user_id)
 
 		query_result = sql_query_result(sql_query)
-		
+
 		if(len(query_result) > 0):
 			quiz_grade = query_result[0][0]
 			return quiz_grade
 		else:
-			print("Error in getting quiz grade for user {} in course oid {}".format(str(user_id), str(course_oid)))
+			logging.error("Error in getting quiz grade for user {} in course oid {}".format(str(user_id), str(course_oid)))
 			return -1
-			
+
 
 	def eval_recommendation_comparison(self, op, l_result, r_result):
 		if(op in ["and", "or"] and l_result in [True, False] and r_result in [True, False]):
@@ -2366,11 +2367,11 @@ class ActionGetMaterialRecommendation(Action):
 				return l_result or r_result
 		else:
 			return False
-	
+
 	def eval_recommendation_clause_op_null(self, value, check_op, check_value):
 		if(value == -1):
 			return False
-		
+
 		if(check_op == "is_finish"):
 			return value > 0
 		elif(check_op == "score_less"):
@@ -2381,32 +2382,32 @@ class ActionGetMaterialRecommendation(Action):
 			return value == check_value
 		else:
 			return False
-	
-	
+
+
 	def eval_recommendation_clause(self, recommendation_clause, user_id, course_id):
-		#print(recommendation_if_clause)
-		
+		#logging.error(recommendation_if_clause)
+
 		recommendation_op = recommendation_clause["op"]
 		if(recommendation_op is None):
-			#print("recommendation_op is null")
+			#logging.error("recommendation_op is null")
 			if(recommendation_clause["oid"].lstrip('-').isdigit() == False):
-				print("Error in oid")
+				logging.error("Error in oid")
 				return False
 			oid = int(recommendation_clause["oid"])
 			check_op = recommendation_clause["check_op"]
 			if(recommendation_clause["check_value"].isdigit() == False):
-				print("Error in check_value")
+				logging.error("Error in check_value")
 				return False
 			check_value = int(recommendation_clause["check_value"])
-			
+
 			if(not(oid == -1 or oid > 0)):
-				print("Error in oid")
+				logging.error("Error in oid")
 				return False
-			
+
 			if(check_op not in ["is_finish", "score_less", "score_more", "score_eq"]):
-				print("Error in check_op")
+				logging.error("Error in check_op")
 				return False
-			
+
 
 			if(oid == -1):
 				#reading count
@@ -2418,46 +2419,46 @@ class ActionGetMaterialRecommendation(Action):
 				return self.eval_recommendation_clause_op_null(quiz_grade, check_op, int(check_value))
 			else:
 				return False
-				
-				
+
+
 		else:
 			l_result = self.eval_recommendation_clause(recommendation_clause["l"], user_id, course_id)
 			r_result = self.eval_recommendation_clause(recommendation_clause["r"], user_id, course_id)
 			return(self.eval_recommendation_comparison(recommendation_op, l_result, r_result))
-			
+
 	def get_course_oid_module_type(self, oid):
 		sql_query = "select b.name \
 					from mdl_course_modules a \
 					left join mdl_modules b on a.module = b.id \
 					where a.id = {}".format(oid)
-	
+
 		query_result = sql_query_result(sql_query)
-		
+
 		if(len(query_result) > 0):
 			module_type = query_result[0][0]
 			return module_type
 		else:
-			print("Error in getting module type for course oid {}".format(oid))
+			logging.error("Error in getting module type for course oid {}".format(oid))
 			return None
-	
+
 	def get_course_oid_name(self, oid, module_type):
 		sql_query = "select c.name as name \
 					from mdl_course_modules a \
 					left join mdl_modules b on a.module = b.id \
 					left join mdl_{} c on a.instance = c.id \
 					where a.id = {}".format(module_type, oid)
-		
+
 		try:
 			query_result = sql_query_result(sql_query)
 		except:
-			print("Error in getting module_name for course oid {}".format(oid))
+			logging.error("Error in getting module_name for course oid {}".format(oid))
 			return None
 		else:
 			if(len(query_result) > 0):
 				module_name = query_result[0][0]
 				return module_name
 			else:
-				print("Error in getting module_name for course oid {}".format(oid))
+				logging.error("Error in getting module_name for course oid {}".format(oid))
 				return None
 
 	def run(self, dispatcher: CollectingDispatcher,
@@ -2467,28 +2468,28 @@ class ActionGetMaterialRecommendation(Action):
 		process_incoming_message(tracker)
 		user_id = get_user_id(tracker)
 		course_id = get_course_id(tracker)
-		print("user_id: " + str(user_id))
-		print("course_id: " + str(course_id))
-		
+		logging.error("user_id: " + str(user_id))
+		logging.error("course_id: " + str(course_id))
+
 		caurosel_elements = []
 		#buttons = []
-		
+
 		course_recommendation_json_str = self.get_recommendation_rule_json(course_id)
-		
+
 		if(course_recommendation_json_str == -1):
 			dispatcher.utter_message(text="No Recommendation at this moment")
 			return []
 
 		#Extract json
 		course_recommendation_json = json.loads(course_recommendation_json_str)
-		#print(course_recommendation_json)
-		#print(len(course_recommendation_json))
+		#logging.error(course_recommendation_json)
+		#logging.error(len(course_recommendation_json))
 		course_recommendation_json_tmp = course_recommendation_json[0]
 		for course_recommendation_json_tmp in course_recommendation_json:
 			course_recommendation_json_tmp_if_clause = course_recommendation_json_tmp["if"]
 			course_recommendation_json_tmp_then_clause = course_recommendation_json_tmp["then"]
 			course_recommendation_json_tmp_if_clause_eval_result = self.eval_recommendation_clause(course_recommendation_json_tmp_if_clause, user_id, course_id)
-			print("User meet recommendation requirement: {}".format(self.eval_recommendation_clause(course_recommendation_json_tmp_if_clause, user_id, course_id)))
+			logging.error("User meet recommendation requirement: {}".format(self.eval_recommendation_clause(course_recommendation_json_tmp_if_clause, user_id, course_id)))
 			if(course_recommendation_json_tmp_if_clause_eval_result == True):
 				for course_oid_tmp in course_recommendation_json_tmp_then_clause:
 					if(course_oid_tmp.isdigit() == True):
@@ -2500,9 +2501,9 @@ class ActionGetMaterialRecommendation(Action):
 								recommendation_name = course_oid_tmp_module_name
 								recommendation_type = course_oid_tmp_module_type
 								recommendation_link_url = "http://fafaoc.net:18000/mod/{}/view.php?id={}".format(recommendation_type, course_oid_tmp_int)
-					
+
 								caurosel_element = {
-													"title": recommendation_name, 
+													"title": recommendation_name,
 													#"image_url": "https://cdn.lihkg.com/assets/img/icon.png",
 													"image_url": "",
 													"buttons": [{
@@ -2512,17 +2513,17 @@ class ActionGetMaterialRecommendation(Action):
 															}]
 													}
 								caurosel_elements.append(caurosel_element)
-								
+
 								'''
 								button = {
 											"title": recommendation_name,
 											"payload": recommendation_link_url
 										 }
-								
+
 								buttons.append(button)
 								'''
-		
-		
+
+
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -2530,15 +2531,15 @@ class ActionGetMaterialRecommendation(Action):
 								"elements": caurosel_elements
 							}
 						  }
-		
-		
-		
+
+
+
 		if(len(caurosel_elements) > 0):
 			dispatcher.utter_message(attachment=output_carousel)
 			#dispatcher.utter_button_message("Here is your recommendation", buttons)
 		else:
 			dispatcher.utter_message(text="No Recommendation at this moment")
-		
+
 		return []
 
 
@@ -2561,7 +2562,7 @@ class ActionGetCustomdata(Action):
 		for e in events:
 			if e['event'] == 'user':
 				user_events.append(e)
-		
+
 		custom_data = user_events[-1]['metadata']
 		#custom_data_json_load = json.loads(custom_data)
 
@@ -2579,17 +2580,4 @@ class ActionGetCustomdata(Action):
 		dispatcher.utter_message(text="user_id: {}".format(user_id))
 		dispatcher.utter_message(text="course_id: {}".format(course_id))
 
-		return []	
-
-
-
-
-
-
-
-
-
-
-
-
-
+		return []
