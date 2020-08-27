@@ -4,7 +4,7 @@
 # See this guide on how to implement these action:
 # https://rasa.com/docs/rasa/core/actions/#custom-actions/
 
-
+# Test
 # This is a simple example for a custom action which utters "Hello World!"
 
 from typing import Any, Text, Dict, List
@@ -93,6 +93,7 @@ def process_incoming_message(tracker):
 
 def get_user_id(tracker):
 	try:
+		events = tracker.current_state()['events']
 		user_events = []
 		for e in events:
 			if e['event'] == 'user':
@@ -108,6 +109,7 @@ def get_user_id(tracker):
 
 def get_course_id(tracker):
 	try:
+		events = tracker.current_state()['events']
 		user_events = []
 		for e in events:
 			if e['event'] == 'user':
@@ -2554,9 +2556,10 @@ class ActionGetCustomdata(Action):
 			domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
 
 		process_incoming_message(tracker)
-		#course_id = get_course_id(tracker)
-		#user_id = get_user_id(tracker)
+		course_id = get_course_id(tracker)
+		user_id = get_user_id(tracker)
 
+		'''
 		events = tracker.current_state()['events']
 		user_events = []
 		for e in events:
@@ -2575,6 +2578,7 @@ class ActionGetCustomdata(Action):
 			course_id = custom_data['course_id']
 		else:
 			course_id = ''
+		'''
 
 		dispatcher.utter_message(text="Get Custom Data")
 		dispatcher.utter_message(text="user_id: {}".format(user_id))
