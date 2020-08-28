@@ -9,6 +9,7 @@
 
 from typing import Any, Text, Dict, List
 
+import requests
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
 
@@ -16,6 +17,8 @@ import mysql.connector
 import json
 from datetime import datetime
 import logging
+
+MOODLE_ROOT_URL = "http://fafaoc.net:18000"
 
 class ActionHelloWorld(Action):
 
@@ -2767,3 +2770,31 @@ class ActionGetCustomdata(Action):
 		dispatcher.utter_message(text="course_id: {}".format(course_id))
 
 		return []
+
+def get_course_modules(course_id, cm_ids):
+	cms = requst_course_modules(course_id)
+	ret = []
+	for cm in cms:
+		if cm["id"] in cm_ids:
+			ret.append(cm)
+
+	return ret
+
+def requst_course_modules(course_id):
+	target = '{}/webservice/rest/server.php?'.format(MOODLE_ROOT_URL)
+	moodle_create_token = 'ad0c8f452d7e04ec3e434d685ad138c5'
+	url_payload = {
+		"wstoken": moodle_create_token,
+		"wsfunction": "core_course_get_contents",
+		"moodlewsrestformat":"json",
+		"courseid": course_id
+	}
+
+	r = requests.get(target, params=url_payload)
+
+	cms = json.loads(r.text)
+
+	return cms
+
+if __name__ == "__main__":
+	print(get_course_modules(24,[240]))
