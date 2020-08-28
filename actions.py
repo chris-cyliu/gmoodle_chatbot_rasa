@@ -471,7 +471,7 @@ class ActionGetClassActivityLessonN(Action):
 							}
 						  }
 
-		dispatcher.utter_message(text="Class activity on lesson N")
+		dispatcher.utter_message(text="Class activity today")
 		dispatcher.utter_message(attachment=output_carousel)
 
 		return []
