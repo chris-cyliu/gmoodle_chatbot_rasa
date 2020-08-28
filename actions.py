@@ -66,7 +66,7 @@ def sql_query_result(sql_query):
 
 
 def process_incoming_message(tracker):
-	#print(json.dumps(tracker.latest_message))
+	#logging.error(json.dumps(tracker.latest_message))
 	#sender_id = (tracker.current_state())["sender_id"]
 	'''
 	events = tracker.current_state()['events']
@@ -84,14 +84,14 @@ def process_incoming_message(tracker):
 
 	intent_ranking = list(tracker.latest_message['intent_ranking'])[0:5]
 	
-	#print("sender_id: " + sender_id)
-	print(intent_detected)
-	#print("Intent detected: " + intent_detected_name)
-	#print("Intent confidence: " + str(intent_detected_confidence))
-	#print(json.dumps(intent_ranking))
-	#print("Custom Data:")
-	#print(custom_data)
-	#print("course_id: " + course_id)
+	#logging.error("sender_id: " + sender_id)
+	logging.error(intent_detected)
+	#logging.error("Intent detected: " + intent_detected_name)
+	#logging.error("Intent confidence: " + str(intent_detected_confidence))
+	#logging.error(json.dumps(intent_ranking))
+	#logging.error("Custom Data:")
+	#logging.error(custom_data)
+	#logging.error("course_id: " + course_id)
 
 def get_user_id(tracker):
 	try:
@@ -253,8 +253,8 @@ class ActionGetAssignmentDeadline(Action):
 					JOIN mdl_modules m ON e.modulename = m.name \
 					JOIN mdl_course_modules cm ON e.instance = cm.instance AND cm.module = m.id AND cm.course = e.courseid \
 					WHERE courseid = {} \
-					AND e.visible = 1 \
-					AND e.modulename=\"assign\"".format(course_id)
+					AND e.visible = 1 AND e.eventtype=\"due\" \
+					AND e.modulename=\"assign\" ".format(course_id)
 
 		query_result = sql_query_result(sql_query)
 
@@ -869,7 +869,7 @@ class ActionGetLessonNTopic(Action):
 		if(lesson_n_value is None):
 			lesson_n_value = 1
 
-		print("lesson value detected: {}". format(lesson_n_value))
+		logging.error("lesson value detected: {}". format(lesson_n_value))
 
 		lesson_n_value_offset = int(lesson_n_value) - 1
 
@@ -1379,7 +1379,6 @@ class ActionGetLectureNotesPDF(Action):
 
 		query_result = sql_query_result(sql_query)
 
-		logging.error(str(course_id) + "\n")
 		material_list = []
 		caurosel_elements = []
 		for x in query_result:
@@ -1605,7 +1604,7 @@ class ActionGetLessonMaterial(Action):
 		if(lesson_n_value is None):
 			lesson_n_value = 1
 
-		print("lesson value detected: {}". format(lesson_n_value))
+		logging.error("lesson value detected: {}". format(lesson_n_value))
 
 		lesson_n_value_offset = int(lesson_n_value)
 
@@ -2443,7 +2442,7 @@ class ActionGetAssignmentGrade(Action):
 		if(assignment_n_value is None):
 			assignment_n_value = 1
 
-		print("assignment value detected: {}". format(assignment_n_value))
+		logging.error("assignment value detected: {}". format(assignment_n_value))
 
 		assignment_n_value_offset = int(assignment_n_value) - 1
 
