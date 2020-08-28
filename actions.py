@@ -631,8 +631,9 @@ class ActionGetGroupPresentationDatetime(Action):
 		user_id = get_user_id(tracker)
 		sql_query = "SELECT ss.id, s.name, ss.starttime FROM moodle.mdl_scheduler_slots ss \
 					JOIN mdl_scheduler_appointment sa ON sa.slotid = ss.id AND sa.studentid = {} \
-					JOIN mdl_scheduler s ON ss.schedulerid = ss.schedulerid \
-					JOIN mdl_course_modules cm ON cm.id = s.id AND cm.visible=1 AND cm.course = {}".format(user_id, course_id)
+					JOIN mdl_scheduler s ON s.id = ss.schedulerid \
+		            JOIN mdl_modules m ON m.name=\"scheduler\" \
+					JOIN mdl_course_modules cm ON cm.instance= s.id AND cm.visible=1 AND cm.course = {} AND m.id = cm.module".format(user_id, course_id)
 
 		query_result = sql_query_result(sql_query)
 
