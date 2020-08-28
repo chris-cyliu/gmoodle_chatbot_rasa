@@ -66,8 +66,9 @@ def sql_query_result(sql_query):
 
 
 def process_incoming_message(tracker):
-	#logging.error(json.dumps(tracker.latest_message))
-	sender_id = (tracker.current_state())["sender_id"]
+	#print(json.dumps(tracker.latest_message))
+	#sender_id = (tracker.current_state())["sender_id"]
+	'''
 	events = tracker.current_state()['events']
 	user_events = []
 	for e in events:
@@ -75,21 +76,22 @@ def process_incoming_message(tracker):
 			user_events.append(e)
 
 	custom_data = user_events[-1]['metadata']
+	'''
 
 	intent_detected = tracker.latest_message['intent']
 	intent_detected_name = intent_detected['name']
 	intent_detected_confidence = intent_detected['confidence']
 
 	intent_ranking = list(tracker.latest_message['intent_ranking'])[0:5]
-
-	logging.error("sender_id: " + sender_id)
-	logging.error(intent_detected)
-	#logging.error("Intent detected: " + intent_detected_name)
-	#logging.error("Intent confidence: " + str(intent_detected_confidence))
-	#logging.error(json.dumps(intent_ranking))
-	#logging.error("Custom Data:")
-	#logging.error(custom_data)
-	#logging.error("course_id: " + course_id)
+	
+	#print("sender_id: " + sender_id)
+	print(intent_detected)
+	#print("Intent detected: " + intent_detected_name)
+	#print("Intent confidence: " + str(intent_detected_confidence))
+	#print(json.dumps(intent_ranking))
+	#print("Custom Data:")
+	#print(custom_data)
+	#print("course_id: " + course_id)
 
 def get_user_id(tracker):
 	try:
@@ -622,6 +624,52 @@ class ActionGetGroupPresentationDatetime(Action):
 
 		dispatcher.utter_message(text="Group Presentation are at...")
 		process_incoming_message(tracker)
+		course_id = get_course_id(tracker)
+		user_id = get_user_id(tracker)
+		sql_query = "SELECT ss.id, s.name, ss.starttime FROM moodle.mdl_scheduler_slots ss \
+					JOIN mdl_scheduler_appointment sa ON sa.slotid = ss.id AND sa.studentid = {} \
+					JOIN mdl_scheduler s ON ss.schedulerid = ss.schedulerid \
+					JOIN mdl_course_modules cm ON cm.id = s.id AND cm.visible=1 AND cm.course = {}".format(user_id, course_id)
+
+		query_result = sql_query_result(sql_query)
+
+		schedule_list = []
+		caurosel_elements = []
+		for x in query_result:
+			schedule_list.append(x)
+			schedule_id_tmp = x[0]
+			schedule_name_tmp = x[1]
+			schedule_datetime_tmp = datetime.fromtimestamp(x[2]).strftime("%Y-%m-%d %H:%M")
+			title_tmp = schedule_name_tmp
+			subtitle_tmp = schedule_datetime_tmp
+			image_url_tmp = ""
+			button_title_tmp = "Go to Link"
+			button_url_tmp = "/mod/scheduler/view.php?id={}".format(schedule_id_tmp)
+
+
+			caurosel_element = {
+								"title": title_tmp,
+								"subtitle": subtitle_tmp,
+								"image_url": image_url_tmp,
+								"buttons": [{
+										"title": button_title_tmp,
+										"url": button_url_tmp,
+										"type": "web_url"
+										}]
+								}
+			caurosel_elements.append(caurosel_element)
+
+		output_carousel = {
+							"type": "template",
+							"payload": {
+								"template_type": "generic",
+								"elements": caurosel_elements
+							}
+						  }
+
+		dispatcher.utter_message(text="Group Presentation are at...")
+		dispatcher.utter_message(attachment=output_carousel)
+
 		return []
 
 class ActionGetNextAssignmentDeadline(Action):
@@ -816,6 +864,37 @@ class ActionGetLessonNTopic(Action):
 
 		dispatcher.utter_message(text="Topic for lesson N is...")
 		process_incoming_message(tracker)
+
+		lesson_n_value = next(tracker.get_latest_entity_values('CARDINAL'), None)
+		if(lesson_n_value is None):
+			lesson_n_value = 1
+
+		print("lesson value detected: {}". format(lesson_n_value))
+
+		lesson_n_value_offset = int(lesson_n_value) - 1
+
+		course_id = get_course_id(tracker)
+		user_id = get_user_id(tracker)
+		sql_query = "SELECT name FROM mdl_course_sections \
+					JOIN ( \
+					SELECT cm.id as cm_id FROM mdl_lesson l \
+					JOIN mdl_modules m ON m.name = \"lesson\" \
+					JOIN mdl_course_modules cm ON l.id = cm.instance AND cm.module = m.id AND cm.visible = 1 AND cm.course={} \
+					ORDER BY l.available \
+					LIMIT 1 OFFSET {} \
+					) tl \
+					WHERE sequence LIKE CONCAT(\"%,\", tl.cm_id,\",%\") \
+					OR  sequence LIKE CONCAT(tl.cm_id,\",%\") \
+					OR sequence LIKE CONCAT(\"%,\", tl.cm_id)".format(course_id, lesson_n_value_offset)
+
+		query_result = sql_query_result(sql_query)
+
+		if(len(query_result) > 0):
+			lesson_topic = query_result[0][0]
+
+			dispatcher.utter_message(text="{}".format(lesson_topic))
+		else:
+			dispatcher.utter_message(text="No ans at this moment")
 		return []
 
 class ActionGetGroupInfo(Action):
@@ -1522,8 +1601,37 @@ class ActionGetLessonMaterial(Action):
 
 		dispatcher.utter_message(text="Get Lesson Material")
 		process_incoming_message(tracker)
-		return []
+		lesson_n_value = next(tracker.get_latest_entity_values('CARDINAL'), None)
+		if(lesson_n_value is None):
+			lesson_n_value = 1
 
+		print("lesson value detected: {}". format(lesson_n_value))
+
+		lesson_n_value_offset = int(lesson_n_value)
+
+		course_id = get_course_id(tracker)
+		user_id = get_user_id(tracker)
+		sql_query = "SELECT cm.section FROM  mdl_course_modules cm \
+					JOIN ( \
+					SELECT section, cm2.course FROM mdl_course_modules cm2 \
+					JOIN mdl_modules m ON m.name = \"lesson\" AND m.id = cm2.module \
+					JOIN mdl_lesson l ON cm2.instance = l.id \
+					WHERE cm2.course = {} \
+					AND cm2.visible = 1 \
+					ORDER BY l.available \
+					LIMIT 1 OFFSET {} \
+					) target ON cm.section = target.section AND cm.course = target.course;".format(course_id, lesson_n_value_offset)
+
+		query_result = sql_query_result(sql_query)
+
+		if(len(query_result) > 0):
+			section_id = query_result[0][0]
+
+			dispatcher.utter_message(text="You can check out the materials throught [here](/course/view.php?id={}#section-{})".format(course_id, section_id))
+		else:
+			dispatcher.utter_message(text="No ans at this moment")
+		return []
+		
 class ActionGetLastLessonMaterial(Action):
 
 	def name(self) -> Text:
@@ -1851,6 +1959,55 @@ class ActionGetLecturerOffice(Action):
 
 		dispatcher.utter_message(text="ActionGetLecturerOffice")
 		process_incoming_message(tracker)
+		course_id = get_course_id(tracker)
+		sql_query = "SELECT u.id, CONCAT(u.lastname,' ', u.firstname) as name, u.address \
+					FROM mdl_role_assignments AS r \
+					JOIN mdl_user AS u on r.userid = u.id \
+					JOIN mdl_role AS rn on r.roleid = rn.id \
+					JOIN mdl_context AS ctx on r.contextid = ctx.id \
+					JOIN mdl_course AS c on ctx.instanceid = c.id \
+					WHERE rn.shortname like '%teacher' \
+					AND c.id = {}".format(course_id)
+
+		query_result = sql_query_result(sql_query)
+
+		office_list = []
+		caurosel_elements = []
+		for x in query_result:
+			office_list.append(x)
+			office_id_tmp = x[0]
+			office_name_tmp = x[1]
+			office_addr_tmp = x[2]
+			title_tmp = office_addr_tmp
+			subtitle_tmp = office_name_tmp
+			image_url_tmp = ""
+			button_title_tmp = "Go to Link"
+			button_url_tmp = "/user/view.php?id={}".format(office_id_tmp)
+
+
+			caurosel_element = {
+								"title": title_tmp,
+								"subtitle": subtitle_tmp,
+								"image_url": image_url_tmp,
+								"buttons": [{
+										"title": button_title_tmp,
+										"url": button_url_tmp,
+										"type": "web_url"
+										}]
+								}
+			caurosel_elements.append(caurosel_element)
+
+		output_carousel = {
+							"type": "template",
+							"payload": {
+								"template_type": "generic",
+								"elements": caurosel_elements
+							}
+						  }
+
+		#dispatcher.utter_message(text="Lecturer office is at...")
+		dispatcher.utter_message(attachment=output_carousel)
+
 		return []
 
 class ActionGetForumMediaResolutionAdjustmentMethod(Action):
@@ -2282,6 +2439,32 @@ class ActionGetAssignmentGrade(Action):
 
 		dispatcher.utter_message(text="ActionGetAssignmentGrade")
 		process_incoming_message(tracker)
+		assignment_n_value = next(tracker.get_latest_entity_values('CARDINAL'), None)
+		if(assignment_n_value is None):
+			assignment_n_value = 1
+
+		print("assignment value detected: {}". format(assignment_n_value))
+
+		assignment_n_value_offset = int(assignment_n_value) - 1
+
+		course_id = get_course_id(tracker)
+		user_id = get_user_id(tracker)
+		sql_query = "SELECT ag.grade FROM mdl_assign_grades ag \
+					JOIN (SELECT a.id, a.name, a.course FROM mdl_assign a \
+					JOIN mdl_modules m ON m.name = \"assign\" \
+					JOIN mdl_course_modules cm ON cm.module = m.id AND cm.instance = a.id AND cm.visible = 1 \
+					WHERE a.course = {} ORDER BY a.duedate LIMIT 1  OFFSET {}) a \
+					ON a.id = ag.assignment \
+					WHERE  ag.userid = {}".format(course_id, assignment_n_value_offset, user_id)
+
+		query_result = sql_query_result(sql_query)
+
+		if(len(query_result) > 0):
+			grade = query_result[0][0]
+
+			dispatcher.utter_message(text="Your grading for assignment {} is: {}".format(assignment_n_value, grade))
+		else:
+			dispatcher.utter_message(text="No ans at this moment")
 		return []
 
 class ActionGetWeeklyPerformance(Action):
