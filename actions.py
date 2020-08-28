@@ -506,7 +506,7 @@ class ActionGetClassRank(Action):
 		course_id = get_course_id(tracker)
 		sql_query = "SELECT * FROM ( \
 						SELECT user_id, rank() over (order by score desc) as ret_rank FROM( \
-						SELECT user_id, COUNT(*)  as score FROM mdl_eduhk_score \
+						SELECT user_id, SUM(score) as score FROM mdl_eduhk_score \
 								WHERE deleted=0 \
 								AND course_id = {} \
 								GROUP BY user_id \
