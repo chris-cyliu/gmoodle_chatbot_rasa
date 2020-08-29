@@ -189,11 +189,11 @@
 - what is the theme of lesson [1](CARDINAL)?
 
 ## intent:gmoodle_group_info_enquiry
-- what is my group number / name?
+- what is my group name?
 - which group am I in?
-- please show me my group number / name.
-- what is the number / name of my group?
-- tell me my group number / name. 
+- please show me my group name.
+- what is the name of my group?
+- tell me my group name. 
 - which group do I belong to?
 
 
