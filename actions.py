@@ -1784,13 +1784,19 @@ class ActionGetGroupVacany(Action):
 		process_incoming_message(tracker)
 		course_id = get_course_id(tracker)
 		user_id = get_user_id(tracker)
-		sql_query = "SELECT g.name as group_name FROM moodle.mdl_choicegroup_options cgo \
-					JOIN mdl_choicegroup cg ON cgo.choicegroupid = cg.id \
-					JOIN mdl_groups g ON cgo.groupid = g.id \
-					JOIN mdl_modules m ON m.name =\"choicegroup\" \
-					JOIN mdl_course_modules cm ON m.id = cm.module AND cm.instance = cgo.id \
-					WHERE cg.course = {} \
-					AND cgo.maxanswers > 0 ".format(course_id)
+		sql_query = "SELECT *  FROM moodle.mdl_choicegroup_options cgo \
+						JOIN mdl_choicegroup cg ON cgo.choicegroupid = cg.id \
+						JOIN mdl_groups g ON cgo.groupid = g.id \
+						JOIN mdl_modules m ON m.name =\"choicegroup\" \
+						JOIN mdl_course_modules cm ON m.id = cm.module AND cm.instance = cg.id AND cm.visible=1\
+						WHERE cg.course = {} \
+						AND (cg.limitanswers = 0 \
+						OR \
+						cgo.maxanswers > ( \
+						SELECT COUNT(*) \
+						FROM mdl_groups_members gm \
+						WHERE gm.groupid = cgo.groupid \
+						) ); ".format(course_id)
 
 		query_result = sql_query_result(sql_query)
 
