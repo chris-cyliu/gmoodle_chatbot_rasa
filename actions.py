@@ -814,7 +814,7 @@ class ActionGetTutorInfo(Action):
 					AND r.contextid = cx.id \
 					AND cx.instanceid = c.id \
 					AND r.roleid = role.id \
-					AND role.shortname in (\"editingteacher\", \"teacher\") \
+					AND role.shortname like (\"%teacher%\") \
 					AND cx.contextlevel =50 AND c.id = {} ".format(course_id)
 
 		query_result = sql_query_result(sql_query)
