@@ -1476,7 +1476,7 @@ class ActionGetLastLessonDatetime(Action):
 						JOIN mdl_course_modules cm ON e.instance = cm.instance AND cm.module = m.id AND cm.course = e.courseid \
 						WHERE courseid = {} \
 						AND modulename=\"lesson\" \
-						ORDER BY e.timestart \
+						ORDER BY e.timestart DESC\
 						LIMIT 1".format(course_id)
 
 			query_result = sql_query_result(sql_query)
