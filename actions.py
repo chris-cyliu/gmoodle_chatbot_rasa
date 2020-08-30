@@ -2866,8 +2866,11 @@ class ActionGetCustomdata(Action):
 		return []
 
 def get_course_modules_by_section_id(course_id, section_id):
-	cms = requst_sections_with_course_modules(course_id,section_id)[0]["modules"]
 	ret = []
+	response = requst_sections_with_course_modules(course_id,section_id)
+	if len(response) == 0 :
+		return ret
+	cms = response[0]["modules"]
 	for cm in cms:
 		if cm["visible"] == 1:
 			ret.append(cm)
@@ -2893,4 +2896,4 @@ def requst_sections_with_course_modules(course_id, section_id):
 	return cms
 
 if __name__ == "__main__":
-	print(get_course_modules_by_section_id(24,[248]))
+	print(get_course_modules_by_section_id(24,248))
