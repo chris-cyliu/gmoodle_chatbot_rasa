@@ -1,4 +1,5 @@
 intents:
+  - gmoodle_get_started
   - greet
   - goodbye
   - affirm
@@ -119,6 +120,7 @@ responses:
   - text: 'Gmoodle question detected. Answer to be given soon!'
 
 actions:
+  - action_get_started
   - action_hello_world
   - action_get_class_attendance
   - action_get_quiz_count

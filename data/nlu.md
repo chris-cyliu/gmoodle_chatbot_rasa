@@ -1,3 +1,6 @@
+## intent:gmoodle_get_started
+- get_started
+
 ## intent:greet
 - hey
 - hello

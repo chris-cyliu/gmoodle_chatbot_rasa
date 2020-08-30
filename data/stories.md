@@ -1,3 +1,6 @@
+## gmoodle_get_start_path
+* gmoodle_get_started
+  - action_get_started
 
 ## happy path
 * greet

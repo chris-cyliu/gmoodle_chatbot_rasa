@@ -131,7 +131,7 @@ def get_course_id(tracker):
 class ActionGetStarted(Action):
 
 	def name(self) -> Text:
-		return "action_get_class_attendance"
+		return "action_get_started"
 
 	def run(self, dispatcher: CollectingDispatcher,
 			tracker: Tracker,
@@ -139,22 +139,15 @@ class ActionGetStarted(Action):
 
 		process_incoming_message(tracker)
 		user_id = get_user_id(tracker)
-		sql_query = "SELECT COUNT(1) as cnt \
-					   FROM mdl_role_assignments AS r \
-							JOIN mdl_user AS u on r.userid = u.id \
-							JOIN mdl_role AS rn on r.roleid = rn.id \
-							JOIN mdl_context AS ctx on r.contextid = ctx.id \
-							JOIN mdl_course AS c on ctx.instanceid = c.id \
-							WHERE rn.shortname = 'student' \
-							AND u.id = {}".format(user_id)
+		
+		buttons = []
+		buttons.append({"title": "how many classes did I attend?", "payload": "/gmoodle_class_attendance_enquiry"})
+		buttons.append({"title": "how many quizzes in this course?", "payload": "/gmoodle_quiz_count_enquiry"})
+		buttons.append({"title": "what are the names of my groupmates?", "payload": "/gmoodle_groupmates_name_enquiry"})
 
-		query_result = sql_query_result(sql_query)
-		class_attend_cnt = query_result[0][0]
+		#dispatcher.utter_message(text="Good morning, how can I help you today?")
+		dispatcher.utter_button_message("Good morning, how can I help you today? You can choose from below or ask other questions in the conversation box", buttons)
 
-		if(class_attend_cnt <= 1):
-			dispatcher.utter_message(text="You have attended {} class.".format(class_attend_cnt))
-		else:
-			dispatcher.utter_message(text="You have attended {} classes.".format(class_attend_cnt))
 		return []
 
 class ActionGetClassAttendance(Action):
@@ -658,7 +651,7 @@ class ActionGetGroupPresentationDatetime(Action):
 		process_incoming_message(tracker)
 		course_id = get_course_id(tracker)
 		user_id = get_user_id(tracker)
-		sql_query = "SELECT ss.id, s.name, ss.starttime FROM moodle.mdl_scheduler_slots ss \
+		sql_query = "SELECT ss.id, CONVERT(s.name, CHAR), ss.starttime FROM moodle.mdl_scheduler_slots ss \
 					JOIN mdl_scheduler_appointment sa ON sa.slotid = ss.id AND sa.studentid = {} \
 					JOIN mdl_scheduler s ON s.id = ss.schedulerid \
 		            JOIN mdl_modules m ON m.name=\"scheduler\" \
@@ -672,6 +665,7 @@ class ActionGetGroupPresentationDatetime(Action):
 			schedule_list.append(x)
 			schedule_id_tmp = x[0]
 			schedule_name_tmp = x[1]
+			#schedule_name_tmp = "testing1234"
 			schedule_datetime_tmp = datetime.fromtimestamp(x[2]).strftime("%Y-%m-%d %H:%M")
 			title_tmp = schedule_name_tmp
 			subtitle_tmp = schedule_datetime_tmp
@@ -700,7 +694,6 @@ class ActionGetGroupPresentationDatetime(Action):
 							}
 						  }
 
-		dispatcher.utter_message(text="Group Presentation are at...")
 		dispatcher.utter_message(attachment=output_carousel)
 
 		return []
@@ -895,7 +888,6 @@ class ActionGetLessonNTopic(Action):
 			tracker: Tracker,
 			domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
 
-		dispatcher.utter_message(text="Topic for lesson N is...")
 		process_incoming_message(tracker)
 
 		lesson_n_value = next(tracker.get_latest_entity_values('CARDINAL'), None)
@@ -906,6 +898,7 @@ class ActionGetLessonNTopic(Action):
 
 		lesson_n_value_offset = int(lesson_n_value) - 1
 
+		dispatcher.utter_message(text="Topic for lesson {} is...".format(lesson_n_value))
 		course_id = get_course_id(tracker)
 		user_id = get_user_id(tracker)
 		sql_query = "SELECT name FROM mdl_course_sections \
@@ -1350,7 +1343,7 @@ class ActionGetAssignmentCount(Action):
 		assignment_count = query_result[0][0]
 
 		dispatcher.utter_message(text="Number of assignment")
-		dispatcher.utter_message(text=str(assignment_count))
+		dispatcher.utter_message(text="There is/are {} assignment(s) in this course".format(assignment_count))
 		return []
 
 class ActionGetReplyDiscussionByMediaMethod(Action):
@@ -1643,23 +1636,55 @@ class ActionGetLessonMaterial(Action):
 
 		course_id = get_course_id(tracker)
 		user_id = get_user_id(tracker)
-		sql_query = "SELECT cm.section FROM  mdl_course_modules cm \
-					JOIN ( \
-					SELECT section, cm2.course FROM mdl_course_modules cm2 \
+		sql_query = "SELECT section FROM mdl_course_modules cm2 \
 					JOIN mdl_modules m ON m.name = \"lesson\" AND m.id = cm2.module \
 					JOIN mdl_lesson l ON cm2.instance = l.id \
 					WHERE cm2.course = {} \
 					AND cm2.visible = 1 \
 					ORDER BY l.available \
-					LIMIT 1 OFFSET {} \
-					) target ON cm.section = target.section AND cm.course = target.course;".format(course_id, lesson_n_value_offset)
+					LIMIT 1 OFFSET {}".format(course_id, lesson_n_value_offset)
 
 		query_result = sql_query_result(sql_query)
 
-		if(len(query_result) > 0):
-			section_id = query_result[0][0]
+		material_list = []
+		caurosel_elements = []
+		for x in query_result:
+			material_list.append(x)
+			material_id_tmp = x[0]
+			course_modules_tmp = get_course_modules_by_section_id(course_id, material_id_tmp)
+			#print(course_modules_tmp)
+			if(len(course_modules_tmp) > 0):
+				material_name_tmp = course_modules_tmp[0]["name"]
+				material_url_tmp = course_modules_tmp[0]["url"]
+				
+				title_tmp = material_name_tmp
+				subtitle_tmp = ""
+				image_url_tmp = ""
+				button_title_tmp = "Go to Link"
+				button_url_tmp = material_url_tmp
 
-			dispatcher.utter_message(text="You can check out the materials throught [here](/course/view.php?id={}#section-{})".format(course_id, section_id))
+				caurosel_element = {
+									"title": title_tmp,
+									"subtitle": subtitle_tmp,
+									"image_url": image_url_tmp,
+									"buttons": [{
+											"title": button_title_tmp,
+											"url": button_url_tmp,
+											"type": "web_url"
+											}]
+									}
+				caurosel_elements.append(caurosel_element)
+			
+		output_carousel = {
+							"type": "template",
+							"payload": {
+								"template_type": "generic",
+								"elements": caurosel_elements
+							}
+						}
+
+		if(len(caurosel_elements) > 0):
+			dispatcher.utter_message(attachment=output_carousel)
 		else:
 			dispatcher.utter_message(text="No ans at this moment")
 		return []
@@ -1677,52 +1702,45 @@ class ActionGetLastLessonMaterial(Action):
 
 		process_incoming_message(tracker)
 		course_id = get_course_id(tracker)
-		sql_query = "SELECT cm.id as cm_id FROM  mdl_course_modules cm \
-					JOIN ( \
-					SELECT section, cm2.course FROM mdl_course_modules cm2 \
+		sql_query = "SELECT section FROM mdl_course_modules cm2 \
 					JOIN mdl_modules m ON m.name = \"lesson\" AND m.id = cm2.module \
 					JOIN mdl_lesson l ON cm2.instance = l.id \
 					WHERE cm2.course = {} \
 					AND cm2.visible = 1 \
 					ORDER BY l.available DESC \
-					LIMIT 1 OFFSET 0 \
-					) target ON cm.section = target.section AND cm.course = target.course AND cm.visible=1".format(course_id)
+					LIMIT 1 OFFSET 0".format(course_id)
 
 		query_result = sql_query_result(sql_query)
 
 		material_list = []
 		caurosel_elements = []
-		print(get_course_modules(24,[1640]))
-		print(get_course_modules(24,[240]))
-		return[]
-		for x in query_result[0:5]:
+		for x in query_result:
 			material_list.append(x)
 			material_id_tmp = x[0]
-			material_id_tmp_list = [material_id_tmp]
-			print(material_id_tmp_list)
-			print(get_course_modules(course_id, material_id_tmp_list))
+			course_modules_tmp = get_course_modules_by_section_id(course_id, material_id_tmp)
+			#print(course_modules_tmp)
+			if(len(course_modules_tmp) > 0):
+				material_name_tmp = course_modules_tmp[0]["name"]
+				material_url_tmp = course_modules_tmp[0]["url"]
+				
+				title_tmp = material_name_tmp
+				subtitle_tmp = ""
+				image_url_tmp = ""
+				button_title_tmp = "Go to Link"
+				button_url_tmp = material_url_tmp
 
-			'''
-			lesson_name_tmp = x[1]
-			lesson_zoom_link_tmp = x[2]
-			title_tmp = lesson_name_tmp
-			subtitle_tmp = ""
-			image_url_tmp = ""
-			button_title_tmp = "Go to Link"
-			button_url_tmp = lesson_zoom_link_tmp
-
-			caurosel_element = {
-								"title": title_tmp,
-								"subtitle": subtitle_tmp,
-								"image_url": image_url_tmp,
-								"buttons": [{
-										"title": button_title_tmp,
-										"url": button_url_tmp,
-										"type": "web_url"
-										}]
-								}
-			caurosel_elements.append(caurosel_element)
-			'''
+				caurosel_element = {
+									"title": title_tmp,
+									"subtitle": subtitle_tmp,
+									"image_url": image_url_tmp,
+									"buttons": [{
+											"title": button_title_tmp,
+											"url": button_url_tmp,
+											"type": "web_url"
+											}]
+									}
+				caurosel_elements.append(caurosel_element)
+			
 		output_carousel = {
 							"type": "template",
 							"payload": {
@@ -1731,8 +1749,10 @@ class ActionGetLastLessonMaterial(Action):
 							}
 						}
 
-		#dispatcher.utter_message(text="The zoom link is...")
-		dispatcher.utter_message(attachment=output_carousel)
+		if(len(caurosel_elements) > 0):
+			dispatcher.utter_message(attachment=output_carousel)
+		else:
+			dispatcher.utter_message(text="No ans at this moment")
 
 		return []
 
