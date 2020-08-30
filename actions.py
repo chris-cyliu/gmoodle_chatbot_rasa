@@ -2845,23 +2845,25 @@ class ActionGetCustomdata(Action):
 
 		return []
 
-def get_course_modules(course_id, cm_ids):
-	cms = requst_course_modules(course_id)
+def get_course_modules_by_section_id(course_id, section_id):
+	cms = requst_sections_with_course_modules(course_id,section_id)[0]["modules"]
 	ret = []
 	for cm in cms:
-		if cm["id"] in cm_ids:
+		if cm["visible"] == 1:
 			ret.append(cm)
-
 	return ret
 
-def requst_course_modules(course_id):
+def requst_sections_with_course_modules(course_id, section_id):
 	target = '{}/webservice/rest/server.php?'.format(MOODLE_ROOT_URL)
 	moodle_create_token = 'ad0c8f452d7e04ec3e434d685ad138c5'
 	url_payload = {
 		"wstoken": moodle_create_token,
 		"wsfunction": "core_course_get_contents",
 		"moodlewsrestformat":"json",
-		"courseid": course_id
+		"courseid": course_id,
+		"options[0][name]": "sectionid",
+		"options[0][value]": section_id,
+
 	}
 
 	r = requests.get(target, params=url_payload)
@@ -2871,4 +2873,4 @@ def requst_course_modules(course_id):
 	return cms
 
 if __name__ == "__main__":
-	print(get_course_modules(24,[240]))
+	print(get_course_modules_by_section_id(24,[248]))
