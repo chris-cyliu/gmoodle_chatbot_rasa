@@ -1505,11 +1505,13 @@ class ActionGetTaskCompletion(Action):
             course_id, course_id, user_id)
 
         query_result = sql_query_result(sql_query)
+        participate_rate = 0
+        try:
+            participate_rate = query_result[0][0]
+        except:
+            pass
 
-        participate_rate = query_result[0][0]
-
-        dispatcher.utter_message(text="Participation Rate")
-        dispatcher.utter_message(text="{0:.1%}".format(participate_rate))
+        dispatcher.utter_message(text="Your current contribution score is {0:.1%}. Keep it up!".format(participate_rate))
 
         return []
 
@@ -1667,6 +1669,32 @@ class ActionGetZoomLink(Action):
 
         return []
 
+def get_caurosel_elements_from_cms(cms):
+    ret = []
+    for cm in cms:
+        if "url" not in cm:
+            continue
+        material_name_tmp = cm["name"]
+        material_url_tmp = cm["url"]
+
+        title_tmp = material_name_tmp
+        subtitle_tmp = ""
+        image_url_tmp = ""
+        button_title_tmp = "Go to Link"
+        button_url_tmp = material_url_tmp
+
+        caurosel_element = {
+            "title": title_tmp,
+            "subtitle": subtitle_tmp,
+            "image_url": image_url_tmp,
+            "buttons": [{
+                "title": button_title_tmp,
+                "url": button_url_tmp,
+                "type": "web_url"
+            }]
+        }
+        ret.append(caurosel_element)
+    return ret
 
 class ActionGetLessonMaterial(Action):
 
@@ -1677,7 +1705,6 @@ class ActionGetLessonMaterial(Action):
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
 
-        dispatcher.utter_message(text="Get Lesson Material")
         process_incoming_message(tracker)
         lesson_n_value = next(tracker.get_latest_entity_values('CARDINAL'),
                               None)
@@ -1689,46 +1716,24 @@ class ActionGetLessonMaterial(Action):
         lesson_n_value_offset = int(lesson_n_value)
 
         course_id = get_course_id(tracker)
-        user_id = get_user_id(tracker)
+
         sql_query = "SELECT section FROM mdl_course_modules cm2 \
 					JOIN mdl_modules m ON m.name = \"lesson\" AND m.id = cm2.module \
 					JOIN mdl_lesson l ON cm2.instance = l.id \
 					WHERE cm2.course = {} \
 					AND cm2.visible = 1 \
 					ORDER BY l.available \
-					LIMIT 1 OFFSET {}".format(course_id, lesson_n_value_offset)
+					LIMIT 1 OFFSET {}".format(course_id, lesson_n_value_offset-1)
 
         query_result = sql_query_result(sql_query)
 
-        material_list = []
-        caurosel_elements = []
-        for x in query_result:
-            material_list.append(x)
-            material_id_tmp = x[0]
-            course_modules_tmp = get_course_modules_by_section_id(course_id,
-                                                                  material_id_tmp)
-            # print(course_modules_tmp)
-            if (len(course_modules_tmp) > 0):
-                material_name_tmp = course_modules_tmp[0]["name"]
-                material_url_tmp = course_modules_tmp[0]["url"]
+        if len(query_result) == 0:
+            dispatcher.utter_message(text="No answer at this moment")
 
-                title_tmp = material_name_tmp
-                subtitle_tmp = ""
-                image_url_tmp = ""
-                button_title_tmp = "Go to Link"
-                button_url_tmp = material_url_tmp
+        section_id = query_result[0][0]
 
-                caurosel_element = {
-                    "title": title_tmp,
-                    "subtitle": subtitle_tmp,
-                    "image_url": image_url_tmp,
-                    "buttons": [{
-                        "title": button_title_tmp,
-                        "url": button_url_tmp,
-                        "type": "web_url"
-                    }]
-                }
-                caurosel_elements.append(caurosel_element)
+        cms = get_course_modules_by_section_id(course_id, section_id)
+        caurosel_elements = get_caurosel_elements_from_cms(cms)
 
         output_carousel = {
             "type": "template",
@@ -1739,9 +1744,14 @@ class ActionGetLessonMaterial(Action):
         }
 
         if (len(caurosel_elements) > 0):
+            if len(caurosel_elements) == 1:
+                dispatcher.utter_message(text="Here is the material for lesson {}".format(lesson_n_value))
+            else:
+                dispatcher.utter_message(text="Here are the materials for lesson {}".format(lesson_n_value))
+
             dispatcher.utter_message(attachment=output_carousel)
         else:
-            dispatcher.utter_message(text="No ans at this moment")
+            dispatcher.utter_message(text="No answer at this moment")
         return []
 
 
@@ -1753,8 +1763,6 @@ class ActionGetLastLessonMaterial(Action):
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-
-        dispatcher.utter_message(text="Get Last Lesson Material")
 
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
@@ -1768,35 +1776,13 @@ class ActionGetLastLessonMaterial(Action):
 
         query_result = sql_query_result(sql_query)
 
-        material_list = []
-        caurosel_elements = []
-        for x in query_result:
-            material_list.append(x)
-            material_id_tmp = x[0]
-            course_modules_tmp = get_course_modules_by_section_id(course_id,
-                                                                  material_id_tmp)
-            # print(course_modules_tmp)
-            if (len(course_modules_tmp) > 0):
-                material_name_tmp = course_modules_tmp[0]["name"]
-                material_url_tmp = course_modules_tmp[0]["url"]
+        if len(query_result) == 0:
+            dispatcher.utter_message(text="No answer at this moment")
 
-                title_tmp = material_name_tmp
-                subtitle_tmp = ""
-                image_url_tmp = ""
-                button_title_tmp = "Go to Link"
-                button_url_tmp = material_url_tmp
+        section_id = query_result[0][0]
 
-                caurosel_element = {
-                    "title": title_tmp,
-                    "subtitle": subtitle_tmp,
-                    "image_url": image_url_tmp,
-                    "buttons": [{
-                        "title": button_title_tmp,
-                        "url": button_url_tmp,
-                        "type": "web_url"
-                    }]
-                }
-                caurosel_elements.append(caurosel_element)
+        cms = get_course_modules_by_section_id(course_id, section_id)
+        caurosel_elements = get_caurosel_elements_from_cms(cms)
 
         output_carousel = {
             "type": "template",
@@ -1807,10 +1793,16 @@ class ActionGetLastLessonMaterial(Action):
         }
 
         if (len(caurosel_elements) > 0):
+            if len(caurosel_elements) == 1:
+                dispatcher.utter_message(
+                    text="Here is the material for last lesson")
+            else:
+                dispatcher.utter_message(
+                    text="Here are the materials for last lesson")
+
             dispatcher.utter_message(attachment=output_carousel)
         else:
-            dispatcher.utter_message(text="No ans at this moment")
-
+            dispatcher.utter_message(text="No answer at this moment")
         return []
 
 
@@ -3013,7 +3005,7 @@ def requst_sections_with_course_modules(course_id, section_id):
 
     }
 
-    r = requests.get(target, params=url_payload)
+    r = requests.get(target, params=url_payload, verify=False)
 
     cms = json.loads(r.text)
 
@@ -3021,4 +3013,4 @@ def requst_sections_with_course_modules(course_id, section_id):
 
 
 if __name__ == "__main__":
-    print(get_course_modules_by_section_id(24, 248))
+    print(get_course_modules_by_section_id(27, 289))
