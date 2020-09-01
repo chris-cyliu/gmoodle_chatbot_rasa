@@ -18,9 +18,12 @@ import json
 from datetime import datetime
 import logging
 
-MOODLE_ROOT_URL = "https://gtmoodle"
-MOODLE_TOKEN = 'ad0c8f452d7e04ec3e434d685ad138c5'
-DB_HOST = "fafaoc.net"
+# MOODLE_ROOT_URL = "https://gtmoodle"
+# MOODLE_TOKEN = 'ad0c8f452d7e04ec3e434d685ad138c5'
+# DB_HOST = "fafaoc.net"
+MOODLE_ROOT_URL = "https://gmoodle.eduhk.hk"
+MOODLE_TOKEN = 'defaaaa4129b7f1a3c309a0cd5a6b5b9'
+DB_HOST = "gmoodle"
 
 
 class ActionHelloWorld(Action):
@@ -1638,11 +1641,15 @@ class ActionGetZoomLink(Action):
             lesson_id_tmp = x[0]
             lesson_name_tmp = x[1]
             lesson_zoom_link_tmp = x[2]
+            button_url_tmp = lesson_zoom_link_tmp
+
+            if lesson_zoom_link_tmp == "":
+                button_url_tmp = "/mod/lesson/view.php?id={}".format(lesson_id_tmp)
+
             title_tmp = lesson_name_tmp
             subtitle_tmp = ""
             image_url_tmp = ""
             button_title_tmp = "Go to Link"
-            button_url_tmp = lesson_zoom_link_tmp
 
             caurosel_element = {
                 "title": title_tmp,
