@@ -371,7 +371,7 @@ class ActionGetElearningDates(Action):
             subtitle_tmp = elearning_datetime_tmp
             image_url_tmp = ""
             button_title_tmp = "Go to Link"
-            button_url_tmp = "/mod/assign/view.php?id={}".format(
+            button_url_tmp = "/mod/lesson/view.php?id={}".format(
                 elearning_id_tmp)
 
             caurosel_element = {
@@ -1514,7 +1514,9 @@ class ActionGetTaskCompletion(Action):
         except:
             pass
 
-        dispatcher.utter_message(text="Your current contribution score is {0:.1%}. Keep it up!".format(participate_rate))
+        dispatcher.utter_message(
+            text="Your current contribution score is {0:.1%}. Keep it up!".format(
+                participate_rate))
 
         return []
 
@@ -1644,7 +1646,8 @@ class ActionGetZoomLink(Action):
             button_url_tmp = lesson_zoom_link_tmp
 
             if lesson_zoom_link_tmp == "":
-                button_url_tmp = "/mod/lesson/view.php?id={}".format(lesson_id_tmp)
+                button_url_tmp = "/mod/lesson/view.php?id={}".format(
+                    lesson_id_tmp)
 
             title_tmp = lesson_name_tmp
             subtitle_tmp = ""
@@ -1676,6 +1679,7 @@ class ActionGetZoomLink(Action):
 
         return []
 
+
 def get_caurosel_elements_from_cms(cms):
     ret = []
     for cm in cms:
@@ -1702,6 +1706,7 @@ def get_caurosel_elements_from_cms(cms):
         }
         ret.append(caurosel_element)
     return ret
+
 
 class ActionGetLessonMaterial(Action):
 
@@ -1730,7 +1735,8 @@ class ActionGetLessonMaterial(Action):
 					WHERE cm2.course = {} \
 					AND cm2.visible = 1 \
 					ORDER BY l.available \
-					LIMIT 1 OFFSET {}".format(course_id, lesson_n_value_offset-1)
+					LIMIT 1 OFFSET {}".format(course_id,
+                                              lesson_n_value_offset - 1)
 
         query_result = sql_query_result(sql_query)
 
@@ -1752,9 +1758,13 @@ class ActionGetLessonMaterial(Action):
 
         if (len(caurosel_elements) > 0):
             if len(caurosel_elements) == 1:
-                dispatcher.utter_message(text="Here is the material for lesson {}".format(lesson_n_value))
+                dispatcher.utter_message(
+                    text="Here is the material for lesson {}".format(
+                        lesson_n_value))
             else:
-                dispatcher.utter_message(text="Here are the materials for lesson {}".format(lesson_n_value))
+                dispatcher.utter_message(
+                    text="Here are the materials for lesson {}".format(
+                        lesson_n_value))
 
             dispatcher.utter_message(attachment=output_carousel)
         else:
@@ -2127,7 +2137,8 @@ class ActionGetLecturerOffice(Action):
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="ActionGetLecturerOffice")
+        dispatcher.utter_message(
+            text="Here is the address and profile of the lectuer")
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
         sql_query = "SELECT u.id, CONCAT(u.lastname,' ', u.firstname) as name, u.address \
@@ -2874,6 +2885,9 @@ class ActionGetMaterialRecommendation(Action):
         course_recommendation_json_str = self.get_recommendation_rule_json(
             course_id)
 
+        dispatcher.utter_message(
+            text="Nothing is better than reading and gaining more and more knowledge! I am glad that you are taking initiatives to learn more! Here is the reading list that your tutor and I suggest for this course. ")
+
         if (course_recommendation_json_str == -1):
             dispatcher.utter_message(text="No Recommendation at this moment")
             return []
@@ -2885,9 +2899,9 @@ class ActionGetMaterialRecommendation(Action):
         course_recommendation_json_tmp = course_recommendation_json[0]
         for course_recommendation_json_tmp in course_recommendation_json:
             course_recommendation_json_tmp_if_clause = \
-            course_recommendation_json_tmp["if"]
+                course_recommendation_json_tmp["if"]
             course_recommendation_json_tmp_then_clause = \
-            course_recommendation_json_tmp["then"]
+                course_recommendation_json_tmp["then"]
             course_recommendation_json_tmp_if_clause_eval_result = self.eval_recommendation_clause(
                 course_recommendation_json_tmp_if_clause, user_id, course_id)
             logging.error("User meet recommendation requirement: {}".format(
@@ -2987,6 +3001,47 @@ class ActionGetCustomdata(Action):
         return []
 
 
+def get_caurosel_dispatch_message(caurosel_elements:List):
+    return {
+            "type": "template",
+            "payload": {
+                "template_type": "generic",
+                "elements": caurosel_elements
+            }
+        }
+
+
+def get_course_outline(course_id:int):
+
+    sql = "SELECT cm.id as cm_id FROM moodle.mdl_tag_instance ti " \
+          "JOIN mdl_tag t ON ti.tagid = t.id AND t.name=\"courseinformation\"" \
+          "JOIN mdl_course_modules cm ON ti.itemid = cm.id AND ti.itemtype  = \"course_modules\" AND cm.visible =1 " \
+          "WHERE cm.course = {}".format(course_id)
+
+    sql_ret = sql_query_result(sql)
+    cm_ids = []
+    for row in sql_ret:
+        cm_ids.append(row[0])
+
+    return get_course_modules(course_id, cm_ids=cm_ids)
+
+
+class ActionGetCourseOutline(Action):
+
+    def name(self) -> Text:
+        return "action_get_course_outline"
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        course_id = get_course_id(tracker)
+
+        cms = get_course_outline(course_id)
+
+        dispatcher.utter_message(attachment=get_caurosel_dispatch_message(get_caurosel_elements_from_cms(cms)))
+
+
 def get_course_modules_by_section_id(course_id, section_id):
     ret = []
     response = requst_sections_with_course_modules(course_id, section_id)
@@ -2999,7 +3054,35 @@ def get_course_modules_by_section_id(course_id, section_id):
     return ret
 
 
+def get_course_modules(course_id, cm_ids: List[int]):
+    r = request_course_modules(course_id)
+
+    cms = json.loads(r.text)
+
+    ret = []
+    # trans the section and cm
+    for section in cms:
+        for cm in section["modules"]:
+            if cm["id"] in cm_ids and cm["visible"] == 1:
+                ret.append(cm)
+
+    return ret
+
+
 def requst_sections_with_course_modules(course_id, section_id):
+    options = {
+        "options[0][name]": "sectionid",
+        "options[0][value]": section_id,
+    }
+
+    r = request_course_modules(course_id, options)
+
+    cms = json.loads(r.text)
+
+    return cms
+
+
+def request_course_modules(course_id: int, options: Dict = {}):
     target = '{}/webservice/rest/server.php?'.format(MOODLE_ROOT_URL)
     moodle_create_token = MOODLE_TOKEN
     url_payload = {
@@ -3007,17 +3090,14 @@ def requst_sections_with_course_modules(course_id, section_id):
         "wsfunction": "core_course_get_contents",
         "moodlewsrestformat": "json",
         "courseid": course_id,
-        "options[0][name]": "sectionid",
-        "options[0][value]": section_id,
-
     }
+
+    url_payload.update(options)
 
     r = requests.get(target, params=url_payload, verify=False)
 
-    cms = json.loads(r.text)
-
-    return cms
+    return r
 
 
-if __name__ == "__main__":
-    print(get_course_modules_by_section_id(27, 289))
+if __name__ == '__main__':
+    print(get_course_outline(27))
