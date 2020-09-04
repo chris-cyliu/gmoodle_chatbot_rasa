@@ -2704,7 +2704,8 @@ class ActionGetMaterialRecommendation(Action):
     def name(self) -> Text:
         return "action_get_material_recommendation"
 
-    def get_recommendation_rule_json(self, course_id):
+    @classmethod
+    def get_recommendation_rule_json(cls, course_id):
         sql_query = "select * from mdl_eduhk_chatbot_rules where course_id = {}".format(
             course_id)
         query_result = sql_query_result(sql_query)
@@ -2715,7 +2716,8 @@ class ActionGetMaterialRecommendation(Action):
         else:
             return -1
 
-    def get_user_reading_count(self, user_id, course_id):
+    @classmethod
+    def get_user_reading_count(cls, user_id, course_id):
         sql_query = "SELECT COUNT(distinct(cm.id)) as reading_cnt FROM moodle.mdl_eduhk_score es \
 					JOIN mdl_course_modules cm ON es.cm_id = cm.id \
 					JOIN mdl_modules m ON cm.module = m.id \
@@ -2734,7 +2736,8 @@ class ActionGetMaterialRecommendation(Action):
                     str(user_id), str(course_id)))
             return -1
 
-    def get_user_quiz_grade(self, user_id, course_oid):
+    @classmethod
+    def get_user_quiz_grade(cls, user_id, course_oid):
         sql_query = "select d.grade \
 					from mdl_course_modules a \
 					left join mdl_modules b on a.module = b.id \
@@ -2754,7 +2757,8 @@ class ActionGetMaterialRecommendation(Action):
                     str(user_id), str(course_oid)))
             return -1
 
-    def eval_recommendation_comparison(self, op, l_result, r_result):
+    @classmethod
+    def eval_recommendation_comparison(cls, op, l_result, r_result):
         if (op in ["and", "or"] and l_result in [True, False] and r_result in [
             True, False]):
             if (op == "and"):
@@ -2764,7 +2768,8 @@ class ActionGetMaterialRecommendation(Action):
         else:
             return False
 
-    def eval_recommendation_clause_op_null(self, value, check_op, check_value):
+    @classmethod
+    def eval_recommendation_clause_op_null(cls, value, check_op, check_value):
         if (value == -1):
             return False
 
@@ -2779,9 +2784,14 @@ class ActionGetMaterialRecommendation(Action):
         else:
             return False
 
-    def eval_recommendation_clause(self, recommendation_clause, user_id,
+    @classmethod
+    def eval_recommendation_clause(cls, recommendation_clause, user_id,
         course_id):
         # logging.error(recommendation_if_clause)
+        try:
+            recommendation_clause["check_value"] = float(recommendation_clause["check_value"])
+        except:
+            return False
 
         recommendation_op = recommendation_clause["op"]
         if (recommendation_op is None):
@@ -2791,10 +2801,7 @@ class ActionGetMaterialRecommendation(Action):
                 return False
             oid = int(recommendation_clause["oid"])
             check_op = recommendation_clause["check_op"]
-            if (recommendation_clause["check_value"].isdigit() == False):
-                logging.error("Error in check_value")
-                return False
-            check_value = int(recommendation_clause["check_value"])
+            check_value = recommendation_clause["check_value"]
 
             if (not (oid == -1 or oid > 0)):
                 logging.error("Error in oid")
@@ -2807,14 +2814,14 @@ class ActionGetMaterialRecommendation(Action):
 
             if (oid == -1):
                 # reading count
-                reading_count = self.get_user_reading_count(user_id, course_id)
-                return self.eval_recommendation_clause_op_null(reading_count,
+                reading_count = cls.get_user_reading_count(user_id, course_id)
+                return cls.eval_recommendation_clause_op_null(reading_count,
                                                                check_op,
                                                                check_value)
             elif (oid > 0):
                 # Quiz
-                quiz_grade = self.get_user_quiz_grade(user_id, oid)
-                return self.eval_recommendation_clause_op_null(quiz_grade,
+                quiz_grade = cls.get_user_quiz_grade(user_id, oid)
+                return cls.eval_recommendation_clause_op_null(quiz_grade,
                                                                check_op,
                                                                int(check_value))
             else:
@@ -2822,15 +2829,15 @@ class ActionGetMaterialRecommendation(Action):
 
 
         else:
-            l_result = self.eval_recommendation_clause(
+            l_result = cls.eval_recommendation_clause(
                 recommendation_clause["l"], user_id, course_id)
-            r_result = self.eval_recommendation_clause(
+            r_result = cls.eval_recommendation_clause(
                 recommendation_clause["r"], user_id, course_id)
             return (
-                self.eval_recommendation_comparison(recommendation_op, l_result,
+                cls.eval_recommendation_comparison(recommendation_op, l_result,
                                                     r_result))
-
-    def get_course_oid_module_type(self, oid):
+    @classmethod
+    def get_course_oid_module_type(cls, oid):
         sql_query = "select b.name \
 					from mdl_course_modules a \
 					left join mdl_modules b on a.module = b.id \
@@ -2846,7 +2853,8 @@ class ActionGetMaterialRecommendation(Action):
                 "Error in getting module type for course oid {}".format(oid))
             return None
 
-    def get_course_oid_name(self, oid, module_type):
+    @classmethod
+    def get_course_oid_name(cls, oid, module_type):
         sql_query = "select c.name as name \
 					from mdl_course_modules a \
 					left join mdl_modules b on a.module = b.id \
@@ -2869,27 +2877,16 @@ class ActionGetMaterialRecommendation(Action):
                         oid))
                 return None
 
-    def run(self, dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-
-        process_incoming_message(tracker)
-        user_id = get_user_id(tracker)
-        course_id = get_course_id(tracker)
-        logging.error("user_id: " + str(user_id))
-        logging.error("course_id: " + str(course_id))
-
+    @classmethod
+    def get_carousel_recommendation_by_user_course_id(cls, user_id:int, course_id:int) -> List:
         caurosel_elements = []
         # buttons = []
 
-        course_recommendation_json_str = self.get_recommendation_rule_json(
+        course_recommendation_json_str = cls.get_recommendation_rule_json(
             course_id)
 
-        dispatcher.utter_message(
-            text="Nothing is better than reading and gaining more and more knowledge! I am glad that you are taking initiatives to learn more! Here is the reading list that your tutor and I suggest for this course. ")
 
         if (course_recommendation_json_str == -1):
-            dispatcher.utter_message(text="No Recommendation at this moment")
             return []
 
         # Extract json
@@ -2902,20 +2899,20 @@ class ActionGetMaterialRecommendation(Action):
                 course_recommendation_json_tmp["if"]
             course_recommendation_json_tmp_then_clause = \
                 course_recommendation_json_tmp["then"]
-            course_recommendation_json_tmp_if_clause_eval_result = self.eval_recommendation_clause(
+            course_recommendation_json_tmp_if_clause_eval_result = cls.eval_recommendation_clause(
                 course_recommendation_json_tmp_if_clause, user_id, course_id)
             logging.error("User meet recommendation requirement: {}".format(
-                self.eval_recommendation_clause(
+                cls.eval_recommendation_clause(
                     course_recommendation_json_tmp_if_clause, user_id,
                     course_id)))
             if (course_recommendation_json_tmp_if_clause_eval_result == True):
                 for course_oid_tmp in course_recommendation_json_tmp_then_clause:
                     if (course_oid_tmp.isdigit() == True):
                         course_oid_tmp_int = int(course_oid_tmp)
-                        course_oid_tmp_module_type = self.get_course_oid_module_type(
+                        course_oid_tmp_module_type = cls.get_course_oid_module_type(
                             course_oid_tmp_int)
                         if (not (course_oid_tmp_module_type is None)):
-                            course_oid_tmp_module_name = self.get_course_oid_name(
+                            course_oid_tmp_module_name = cls.get_course_oid_name(
                                 course_oid_tmp, course_oid_tmp_module_type)
                             if (not (course_oid_tmp_module_name is None)):
                                 recommendation_name = course_oid_tmp_module_name
@@ -2936,13 +2933,27 @@ class ActionGetMaterialRecommendation(Action):
                                 caurosel_elements.append(caurosel_element)
 
                                 '''
-								button = {
-											"title": recommendation_name,
-											"payload": recommendation_link_url
-										 }
+                                button = {
+                                            "title": recommendation_name,
+                                            "payload": recommendation_link_url
+                                         }
 
-								buttons.append(button)
-								'''
+                                buttons.append(button)
+                                '''
+
+
+
+        return caurosel_elements
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        user_id = get_user_id(tracker)
+        course_id = get_course_id(tracker)
+
+        caurosel_elements = self.get_carousel_recommendation_by_user_course_id(user_id, course_id)
 
         output_carousel = {
             "type": "template",
@@ -2951,6 +2962,9 @@ class ActionGetMaterialRecommendation(Action):
                 "elements": caurosel_elements
             }
         }
+
+        dispatcher.utter_message(
+            text="Nothing is better than reading and gaining more and more knowledge! I am glad that you are taking initiatives to learn more! Here is the reading list that your tutor and I suggest for this course. ")
 
         if (len(caurosel_elements) > 0):
             dispatcher.utter_message(attachment=output_carousel)
@@ -2969,6 +2983,7 @@ class ActionGetCustomdata(Action):
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
         user_id = get_user_id(tracker)
@@ -3035,6 +3050,7 @@ class ActionGetCourseOutline(Action):
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
 
+        process_incoming_message(tracker)
         course_id = get_course_id(tracker)
 
         cms = get_course_outline(course_id)
@@ -3100,4 +3116,4 @@ def request_course_modules(course_id: int, options: Dict = {}):
 
 
 if __name__ == '__main__':
-    print(get_course_outline(27))
+    ActionGetMaterialRecommendation.get_carousel_recommendation_by_user_course_id(1,27)
