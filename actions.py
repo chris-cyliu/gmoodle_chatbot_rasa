@@ -18,12 +18,12 @@ import json
 from datetime import datetime
 import logging
 
-# MOODLE_ROOT_URL = "https://gtmoodle"
-# MOODLE_TOKEN = 'ad0c8f452d7e04ec3e434d685ad138c5'
-# DB_HOST = "fafaoc.net"
+#MOODLE_ROOT_URL = "https://gtmoodle"
+#MOODLE_TOKEN = 'ad0c8f452d7e04ec3e434d685ad138c5'
+DB_HOST = "fafaoc.net"
 MOODLE_ROOT_URL = "https://gmoodle.eduhk.hk"
 MOODLE_TOKEN = 'defaaaa4129b7f1a3c309a0cd5a6b5b9'
-DB_HOST = "gmoodle"
+#DB_HOST = "gmoodle"
 
 
 class ActionHelloWorld(Action):
@@ -528,8 +528,124 @@ class ActionGetTaskMissedLessonN(Action):
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="Task missed on lesson N")
-        process_incoming_message(tracker)
+        
+        lesson_n_value = next(tracker.get_latest_entity_values('CARDINAL'),
+                              None)
+        if (lesson_n_value is None):
+            lesson_n_value = 1
+
+        logging.error("lesson value detected: {}".format(lesson_n_value))
+
+        lesson_n_value_offset = int(lesson_n_value) - 1
+
+        dispatcher.utter_message(
+            text="Task missed for lesson {} is...".format(lesson_n_value))
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        sql_query = "SELECT cm.id \
+                    FROM mdl_course_modules cm \
+                    WHERE cm.course = {} \
+                    AND section = ( \
+                            SELECT section \
+                                    FROM mdl_course_modules cm2 \
+                            JOIN mdl_modules m ON m.name = \"lesson\" AND m.id = cm2.module \
+                            JOIN mdl_lesson l ON l.id = cm2.instance \
+                            WHERE cm2.course = cm.course \
+                            AND cm2.visible=1 \
+                            ORDER BY l.available \
+                            LIMIT 1 OFFSET {} \
+                    ) \
+                    AND cm.id not in ( \
+                    SELECT cm_id FROM mdl_eduhk_score es \
+                    WHERE es.course_id = cm.course \
+                    AND es.user_id ={});".format(course_id, lesson_n_value_offset, user_id)
+
+
+        query_result = sql_query_result(sql_query)
+
+        if (len(query_result) > 0):
+            caurosel_elements = []
+            task_missed_section_id_list = []
+            for x in query_result:
+                task_missed_section_id_list.append(x[0])
+            
+            print(task_missed_section_id_list)
+            cms = get_course_modules(course_id, task_missed_section_id_list)
+            print(cms)
+            caurosel_elements = get_caurosel_elements_from_cms(cms)
+
+            output_carousel = {
+                "type": "template",
+                "payload": {
+                    "template_type": "generic",
+                    "elements": caurosel_elements
+                }
+            }
+
+            if len(caurosel_elements) == 1:
+                dispatcher.utter_message(
+                    text="Here is the missed task for lesson {}".format(
+                        lesson_n_value))
+            else:
+                dispatcher.utter_message(
+                    text="Here are the missed tasks for lesson {}".format(
+                        lesson_n_value))
+
+            dispatcher.utter_message(attachment=output_carousel)
+
+        else:
+            dispatcher.utter_message(text="No answer at this moment")
+
+
+        '''
+        if (len(query_result) > 0):
+            task_missed_section_id_list = []
+            caurosel_elements = []
+            for x in query_result:
+                task_missed_section_id_list.append(x[0])
+
+            #print(task_missed_list)
+            #print(get_course_modules(course_id, task_missed_list))
+
+            task_missed_course_modules_list = get_course_modules(course_id, task_missed_section_id_list)
+            print(json.dumps(task_missed_course_modules_list, indent=4))
+            for x in task_missed_course_modules_list:
+                task_missed_name_tmp = x['name']
+                task_missed_url_tmp = x['url']
+                title_tmp = task_missed_name_tmp
+                subtitle_tmp = ""
+                image_url_tmp = ""
+                button_title_tmp = "Go to Link"
+                button_url_tmp = task_missed_url_tmp
+
+                caurosel_element = {
+                    "title": title_tmp,
+                    "subtitle": subtitle_tmp,
+                    "image_url": image_url_tmp,
+                    "buttons": [{
+                        "title": button_title_tmp,
+                        "url": button_url_tmp,
+                        "type": "web_url"
+                    }]
+                }
+                caurosel_elements.append(caurosel_element) 
+
+            output_carousel = {
+                "type": "template",
+                "payload": {
+                    "template_type": "generic",
+                    "elements": caurosel_elements
+                }
+            }
+
+            dispatcher.utter_message(attachment=output_carousel)
+        
+        
+        else:
+            dispatcher.utter_message(text="No ans at this moment")
+        '''
+
         return []
 
 
@@ -1532,6 +1648,57 @@ class ActionGetReplyPostStudent(Action):
         dispatcher.utter_message(
             text="Who have replied my post? The answer is...")
         process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+        sql_query = "SELECT u.id as userid, CONCAT(u.lastname, \" \", u.firstname) as name \
+                    FROM mdl_user u \
+                    WHERE u.id in ( \
+                    SELECT distinct fp.userid \
+                    FROM mdl_forum_discussions fd \
+                    JOIN mdl_forum_posts fp ON (fp.discussion = fd.id AND fp.userid <> fd.userid) \
+                    WHERE fd.userid = {} \
+                    AND fd.course = {})".format(user_id, course_id)
+
+        query_result = sql_query_result(sql_query)
+
+        if(len(query_result) > 0):
+            user_list = []
+            caurosel_elements = []
+            for x in query_result:
+                user_list.append(x)
+                user_id_tmp = x[0]
+                user_name_tmp = x[1]
+                user_link_url_tmp = "/user/index.php?id={}".format(user_id)
+                user_photo_url_tmp = "user/pix.php/{}/f1.jpg".format(user_id)
+                title_tmp = user_name_tmp
+                subtitle_tmp = ""
+                image_url_tmp = user_photo_url_tmp
+                button_title_tmp = "Go to Link"
+                button_url_tmp = user_link_url_tmp
+
+                caurosel_element = {
+                    "title": title_tmp,
+                    "subtitle": subtitle_tmp,
+                    "image_url": image_url_tmp,
+                    "buttons": [{
+                        "title": button_title_tmp,
+                        "url": button_url_tmp,
+                        "type": "web_url"
+                    }]
+                }
+                caurosel_elements.append(caurosel_element)
+
+            output_carousel = {
+                "type": "template",
+                "payload": {
+                    "template_type": "generic",
+                    "elements": caurosel_elements
+                }
+            }
+
+            dispatcher.utter_message(attachment=output_carousel)
+        else:
+            dispatcher.utter_message(text="No one reply your post")
         return []
 
 
