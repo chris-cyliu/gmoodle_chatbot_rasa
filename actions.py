@@ -2865,6 +2865,173 @@ class ActionGetChangePasswordMethod(Action):
         process_incoming_message(tracker)
         return []
 
+class ActionGetGroupmateGroupN(Action):
+
+    def name(self) -> Text:
+        return "action_get_groupmate_group_N"
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        dispatcher.utter_message(
+            text="Groupmate for Group N are...")
+        process_incoming_message(tracker)
+
+        group_n_value = next(tracker.get_latest_entity_values('CARDINAL'),
+                              None)
+        if (group_n_value is None):
+            group_n_value = 1
+
+        logging.error("Group value detected: {}".format(group_n_value))
+
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        sql_query = "SELECT u.id as user_id, CONCAT(u.lastname, \" \", u.firstname) as name \
+                    FROM mdl_groups_members gm \
+                    JOIN mdl_user u ON gm.userid = u.id \
+                    WHERE gm.groupid  = ( \
+                    SELECT g.id \
+                    FROM mdl_groups g \
+                    WHERE regexp_substr(g.name, \"(\\\d+)\") = \'{}\' \
+                    AND g.courseid ={})".format(group_n_value, course_id)
+
+        print(sql_query)
+        query_result = sql_query_result(sql_query)
+        print(query_result)
+
+
+        if (len(query_result) > 0):
+            caurosel_elements = []
+            groupmate_list = []
+            for x in query_result:
+                groupmate_list.append(x)
+                groupmate_id_tmp = x[0]
+                groupmate_name_tmp = x[1]
+                groupmate_link_url_tmp = "/user/index.php?id={}".format(groupmate_id_tmp)
+                groupmate_photo_url_tmp = "/user/pix.php/{}/f1.jpg".format(groupmate_id_tmp)
+                title_tmp = groupmate_name_tmp
+                subtitle_tmp = ""
+                image_url_tmp = groupmate_photo_url_tmp
+                button_title_tmp = "Go to Link"
+                button_url_tmp = groupmate_link_url_tmp
+
+                caurosel_element = {
+                    "title": title_tmp,
+                    "subtitle": subtitle_tmp,
+                    "image_url": image_url_tmp,
+                    "buttons": [{
+                        "title": button_title_tmp,
+                        "url": button_url_tmp,
+                        "type": "web_url"
+                    }]
+                }
+                caurosel_elements.append(caurosel_element)
+
+            output_carousel = {
+                "type": "template",
+                "payload": {
+                    "template_type": "generic",
+                    "elements": caurosel_elements
+                }
+            }
+
+            dispatcher.utter_message(attachment=output_carousel)
+
+        else:
+            dispatcher.utter_message(text="No answer at this moment")
+
+        return []
+
+class ActionGetContributionScore(Action):
+
+    def name(self) -> Text:
+        return "action_get_current_contribution_score"
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        dispatcher.utter_message(text="ActionGetContributionScore")
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+        sql_query = "SELECT SUM(score) \
+                    FROM mdl_eduhk_score es \
+                    WHERE es.deleted = 0 \
+                    AND user_id = {} \
+                    AND course_id = {}".format(user_id, course_id)
+
+        query_result = sql_query_result(sql_query)
+
+        if (len(query_result) > 0):
+            score = query_result[0][0]
+
+            dispatcher.utter_message(
+                text="Your current contribution score is {}. ".format(score))
+        else:
+            dispatcher.utter_message(text="No ans at this moment")
+        return []
+
+class ActionGetGroupAllocationMethod(Action):
+
+    def name(self) -> Text:
+        return "action_get_group_allocation_method"
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        dispatcher.utter_message(text="ActionGetGroupAllocationMethod")
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+        sql_query = "SELECT cm.id as cm_id, cg.name \
+                    FROM mdl_choicegroup cg \
+                    JOIN mdl_modules m ON m.name = \"choicegroup\" \
+                    JOIN mdl_course_modules cm ON cm.module = m.id AND cm.instance = cg.id \
+                    WHERE cg.course = {} ".format(course_id)
+
+        query_result = sql_query_result(sql_query)
+
+        if (len(query_result) > 0):
+            caurosel_elements = []
+            group_list = []
+            for x in query_result:
+                group_list.append(x)
+                group_id_tmp = x[0]
+                group_name_tmp = x[1]
+                group_link_url_tmp = "/mod/choicegroup/view.php?id={}".format(group_id_tmp)
+                title_tmp = group_name_tmp
+                subtitle_tmp = ""
+                image_url_tmp = ""
+                button_title_tmp = "Go to Link"
+                button_url_tmp = group_link_url_tmp
+
+                caurosel_element = {
+                    "title": title_tmp,
+                    "subtitle": subtitle_tmp,
+                    "image_url": image_url_tmp,
+                    "buttons": [{
+                        "title": button_title_tmp,
+                        "url": button_url_tmp,
+                        "type": "web_url"
+                    }]
+                }
+                caurosel_elements.append(caurosel_element)
+
+            output_carousel = {
+                "type": "template",
+                "payload": {
+                    "template_type": "generic",
+                    "elements": caurosel_elements
+                }
+            }
+
+            dispatcher.utter_message(attachment=output_carousel)
+        else:
+            dispatcher.utter_message(text="No ans at this moment")
+        return []
 
 class ActionGetMaterialRecommendation(Action):
 
