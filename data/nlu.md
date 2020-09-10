@@ -117,7 +117,6 @@
 - Please show me the class activities today.
 - which tasks do I need to finish today?
 
-<!--
 ## intent:gmoodle_task_missed_on_lesson_N_enquiry
 - any task I missed/forgot to do on lesson N?
 - what are the tasks I missed on lesson N?
@@ -125,7 +124,6 @@
 - show me the activities I missed on lesson N.
 - what are the activities I haven't finished on lesson N?
 - any activities am I missing on lesson N?
--->
 
 ## intent:gmoodle_class_rank_enquiry
 - what is the ranking of me in the class?
@@ -267,6 +265,8 @@ Remove
 - Any references about the certain topic?
 - Any reading materials for this task?
 
+## intent:gmoodle_course_learning_resource_on_specific_topic_enquiry_get_topic_section_id
+
 <!--
 Remove
 ## intent:gmoodle_past_average_score_enquiry
@@ -364,7 +364,6 @@ Remove
 - What are my scores for the class participation?
 - How many tasks that I’ve done?
 
-<!-->
 ## intent:gmoodle_reply_student_post_enquiry
 - who have replied my post?
 - How many people replied to my post?
@@ -372,7 +371,6 @@ Remove
 - Anyone join the discussion in the forum?
 - Tell me the name of people who replied.
 - Count the number of people who replied.
--->
 
 ## intent:gmoodle_last_lesson_datetime_enquiry
 - when will be the last teaching lesson?
@@ -752,10 +750,62 @@ Merge with gmoodle_course_learning_resource_on_specific_topic_enquiry
 - where can I change my password? 
 - how can I change my password? 
 
+## intent:gmoogle_group_N_groupmate_enquiry
+- Who are in group [1](CARDINAL)?
+- Who is the person in group [1](CARDINAL)?
+- I want to find groupmates in group [1](CARDINAL)
+- Who are groupmates in group [1](CARDINAL)?
+
+## intent:gmoodle_whoami
+- What is your name?
+- Who are you?
+
+## intent:gmoodle_get_course_outline
+- May I have the course outline?
+- Any assignment guidelines?
+- Is there any mid-term test?
+- What is the course schedule?"
+
+## intent:gmoodle_current_contribution_score_enquiry
+- What is my current contribution score?
+
+## intent:gmoodle_attendence_requirement
+- What is the attendance requirement of this course?
+
+## intent:gmoodle_group_allocation_method_enquiry
+- How would we allocate the group?
+
+## intent:gmoodle_how_to_get_A
+- Is it easy to get an A in the course?
+
+## intent:gmoodle_online_lesson_datetime_enquiry
+- When will be the online lesson?
+
+## intent:gmoodle_refer_course_outline_and_teacher
+- What is this course about?
+- Would there be any group project?
+- Will there be any examination?
+- What would we do in our tutorial?
+
+## intent:gmoodle_advice_contract_teacher
+- Why you know nothing?
+
+## intent:gmoodle_unknown_questions
+- crazy
+- You are stupid
+- Why so late? 
+- Can you sing a song?
 
 ## intent:gmoodle_material_recommendation_enquiry
 - Give me some recommendation
 - Recommend me something
+
+## intent:gmoodle_presentation_time_enquiry
+- When will I present?
+
+## intent:gmoodle_discussion_forum_raise_question_method_enquiry
+- How can I raise a question to teacher and classmate in a discussion forum?
+
 
 ## intent:gmoodle_customdata_enquiry
 - what parameter i pass

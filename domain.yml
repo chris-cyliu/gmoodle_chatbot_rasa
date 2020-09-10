@@ -30,6 +30,7 @@ intents:
   #- gmoodle_forum_miss_response_topic_enquiry
   - gmoodle_course_learning_resource_update_enquiry
   - gmoodle_course_learning_resource_on_specific_topic_enquiry
+  - gmoodle_course_learning_resource_on_specific_topic_enquiry_get_topic_section_id
   #- gmoodle_past_average_score_enquiry
   #- gmoodle_past_course_feedback_enquiry
   - gmoodle_assignment_submit_method_enquiry
@@ -83,8 +84,23 @@ intents:
   - gmoodle_assignment_grade_enquiry
   - gmoodle_weekly_performance_enquiry
   - gmoodle_change_password_method_enquiry
+  - gmoogle_group_N_groupmate_enquiry
+  - gmoodle_whoami
+  - gmoodle_get_course_outline
+  - gmoodle_current_contribution_score_enquiry
+  - gmoodle_attendence_requirement
+  - gmoodle_group_allocation_method_enquiry
+  - gmoodle_how_to_get_A
+  - gmoodle_online_lesson_datetime_enquiry
+  - gmoodle_refer_course_outline_and_teacher
+  - gmoodle_advice_contract_teacher
+  - gmoodle_unknown_questions
   - gmoodle_material_recommendation_enquiry
+  - gmoodle_presentation_time_enquiry
+  - gmoodle_discussion_forum_raise_question_method_enquiry
+
   - gmoodle_customdata_enquiry
+
 
 
 responses:
@@ -145,6 +161,7 @@ actions:
   - action_get_missed_topic_discussion
   - action_get_course_learning_resource_update
   - action_get_course_learning_resource_topic_n
+  - action_get_course_learning_resource_by_section_id
   - action_get_course_past_average_score
   - action_get_course_past_feedback
   - action_get_assignment_submit_method
@@ -198,7 +215,20 @@ actions:
   - action_get_assignment_grade
   - action_get_weekly_performace
   - action_get_change_password_method
+  - action_get_groupmate_group_N
+  - action_get_gmoodle_bot_intro
+  - action_get_course_outline
+  - action_get_current_contribution_score
+  - action_get_attendance_requirement
+  - action_get_group_allocation_method
+  - action_get_A_method
+  - action_get_online_lesson_datetime
+  - action_refer_course_outline
+  - action_advise_contact_teacher
+  - action_unknown_question
   - action_get_material_recommendation
+  - action_get_presentation_time
+  - action_get_discussion_forum_raise_question_method
   - action_get_customdata
   
   
@@ -229,8 +259,9 @@ actions:
   
   
   
-  
-  
+slots:
+  section_id:
+    type: text
   
   
   

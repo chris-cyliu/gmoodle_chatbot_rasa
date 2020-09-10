@@ -58,6 +58,10 @@
 * gmoodle_class_activity_on_lesson_N_enquiry
   - action_get_class_activity_lesson_n
 
+## gmoodle_task_missed_on_lesson_N_enquiry_path
+* gmoodle_task_missed_on_lesson_N_enquiry
+  - action_get_task_missed_lesson_n
+
 ## gmoodle_class_rank_enquiry_path
 * gmoodle_class_rank_enquiry
   - action_get_class_rank
@@ -105,6 +109,8 @@
 ## gmoodle_course_learning_resource_on_specific_topic_enquiry_path
 * gmoodle_course_learning_resource_on_specific_topic_enquiry
   - action_get_course_learning_resource_topic_n
+* gmoodle_course_learning_resource_on_specific_topic_enquiry_get_topic_section_id{"section_id": "1"}
+  - action_get_course_learning_resource_by_section_id
 
 
 ## gmoodle_assignment_submit_method_enquiry_path
@@ -130,6 +136,10 @@
 ## gmoodle_task_completion_enquiry_path
 * gmoodle_task_completion_enquiry
   - action_get_task_completion  
+
+## gmoodle_reply_student_post_enquiry_path
+* gmoodle_reply_student_post_enquiry
+  - action_get_reply_post_student  
 
 ## gmoodle_last_lesson_datetime_enquiry_path
 * gmoodle_last_lesson_datetime_enquiry
@@ -217,9 +227,64 @@
 * gmoodle_change_password_method_enquiry
   - action_get_change_password_method
 
+## gmoogle_group_N_groupmate_enquiry_path
+* gmoogle_group_N_groupmate_enquiry
+  - action_get_groupmate_group_N
+
+## gmoodle_whoami_path
+* gmoodle_whoami
+  - action_get_gmoodle_bot_intro
+
+## gmoodle_course_outline_enquiry_path
+* gmoodle_course_outline_enquiry
+  - action_get_course_outline
+
+## gmoodle_current_contribution_score_enquiry_path
+* gmoodle_current_contribution_score_enquiry
+  - action_get_current_contribution_score
+
+## gmoodle_attendence_requirement_path
+* gmoodle_attendence_requirement
+  - action_get_attendance_requirement
+
+## gmoodle_group_allocation_method_enquiry_path
+* gmoodle_group_allocation_method_enquiry
+  - action_get_group_allocation_method
+
+## gmoodle_how_to_get_A_path
+* gmoodle_how_to_get_A
+  - action_get_A_method
+
+## gmoodle_online_lesson_datetime_enquiry_path
+* gmoodle_online_lesson_datetime_enquiry
+  - action_get_online_lesson_datetime
+
+## gmoodle_refer_course_outline_and_teacher_path
+* gmoodle_refer_course_outline_and_teacher
+  - action_refer_course_outline
+
+## gmoodle_advice_contract_teacher_path
+* gmoodle_advice_contract_teacher
+  - action_advise_contact_teacher
+
+## gmoodle_unknown_questions_path
+* gmoodle_unknown_questions
+  - action_unknown_question
+
 ## gmoodle_gmoodle_material_recommendation_enquiry_path
 * gmoodle_material_recommendation_enquiry
   - action_get_material_recommendation
+
+## gmoodle_presentation_time_enquiry_path
+* gmoodle_presentation_time_enquiry
+  - action_get_presentation_time
+
+## gmoodle_discussion_forum_raise_question_method_enquiry_path
+* gmoodle_discussion_forum_raise_question_method_enquiry
+  - action_get_discussion_forum_raise_question_method
+
+
+
 
 ## gmoodle_gmoodle_customdata_enquiry_enquiry_path
 * gmoodle_customdata_enquiry

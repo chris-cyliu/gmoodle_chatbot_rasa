@@ -1276,11 +1276,69 @@ class ActionGetCourseLearningResourceTopicN(Action):
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(
-            text="Here is the course learning resource for topic N...")
+
         process_incoming_message(tracker)
+        user_id = get_user_id(tracker)
+        course_id = get_course_id(tracker)
+        sql_query = "SELECT id as section_id, name, sequence \
+                    from mdl_course_sections \
+                    WHERE course = {} and visible = 1".format(course_id)
+
+        query_result = sql_query_result(sql_query)
+
+        if(len(query_result) > 0):
+            buttons = []
+            for x in query_result:
+                topic_name_tmp = x[1]
+                #print(topic_name_tmp)
+                topic_section_id_tmp = x[0]
+                topic_sequence_tmp = x[2]
+                if(topic_name_tmp is not None):
+                    buttons.append({"title": topic_name_tmp,
+                                    "payload": "/gmoodle_course_learning_resource_on_specific_topic_enquiry_get_topic_section_id{\"section_id\":"+str(topic_section_id_tmp)+"}"})
+
+
+            dispatcher.utter_button_message(
+                "Which topic do you want to know?",
+                buttons)
+        else:
+            dispatcher.utter_message(text="No ans at this moment")
+
         return []
 
+
+class ActionGetCourseLearningResourceBySectionID(Action):
+
+    def name(self) -> Text:
+        return "action_get_course_learning_resource_by_section_id"
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        user_id = get_user_id(tracker)
+        course_id = get_course_id(tracker)
+
+        #print(tracker.get_slot('section_id'))
+
+        section_id = tracker.get_slot('section_id')
+
+        cms = get_course_modules_by_section_id(course_id, section_id)
+        caurosel_elements = get_caurosel_elements_from_cms(cms)
+
+        output_carousel = {
+            "type": "template",
+            "payload": {
+                "template_type": "generic",
+                "elements": caurosel_elements
+            }
+        }
+
+        dispatcher.utter_message(
+            text="Here is the course learning resource ...")
+        dispatcher.utter_message(attachment=output_carousel)
+        return []
 
 '''
 class ActionGetCoursePastAverageScore(Action):
