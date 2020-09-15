@@ -17,13 +17,38 @@ import mysql.connector
 import json
 from datetime import datetime
 import logging
+import random
 
-#MOODLE_ROOT_URL = "https://gtmoodle"
-#MOODLE_TOKEN = 'ad0c8f452d7e04ec3e434d685ad138c5'
-DB_HOST = "fafaoc.net"
+DB_HOST = "gmoodle"
 MOODLE_ROOT_URL = "https://gmoodle.eduhk.hk"
 MOODLE_TOKEN = 'defaaaa4129b7f1a3c309a0cd5a6b5b9'
-#DB_HOST = "gmoodle"
+# ===========For dev server, use the following =========
+# DB_HOST = "fafaoc.net"
+# MOODLE_ROOT_URL = "https://fafaoc.net:18000/"
+# MOODLE_TOKEN = 'ad0c8f452d7e04ec3e434d685ad138c5'
+
+WELCOME_QUESTION = [
+    {
+        "title": "Where can I find the course schedule?",
+        "payload": "/gmoodle_course_schedule_enquiry"
+    },
+    {
+        "title": "How can I contact my course instructor?",
+        "payload": "/gmoodle_tutor_contact_enquiry"
+    },
+    {
+        "title": "When will be the online lesson?",
+        "payload": "/gmoodle_elearning_date_enquiry"
+    },
+    {
+        "title": "What is the average contribution score in the class?",
+        "payload": "/gmoodle_wiki_contribution_comparison_with_overall_enquiry"
+    },
+    {
+        "title": "When will be the next lesson?",
+        "payload": "/gmoodle_get_next_lesson"
+    }
+]
 
 
 class ActionHelloWorld(Action):
@@ -137,6 +162,16 @@ def get_course_id(tracker):
 
 class ActionGetStarted(Action):
 
+    def get_greeting(self):
+        now = datetime.now()
+        hour = now.hour
+        if 4 <= hour < 12:
+            return "Good morning"
+        elif 12 <= hour < 18:
+            return "Good afternoon"
+        else:
+            return "Good evening"
+
     def name(self) -> Text:
         return "action_get_started"
 
@@ -146,18 +181,24 @@ class ActionGetStarted(Action):
         process_incoming_message(tracker)
         user_id = get_user_id(tracker)
 
-        buttons = []
-        buttons.append({"title": "how many classes did I attend?",
-                        "payload": "/gmoodle_class_attendance_enquiry"})
-        buttons.append({"title": "how many quizzes in this course?",
-                        "payload": "/gmoodle_quiz_count_enquiry"})
-        buttons.append({"title": "what are the names of my groupmates?",
-                        "payload": "/gmoodle_groupmates_name_enquiry"})
+        if user_id == 0:
+            caurosel = get_caurosel_elements_from_cms([["Login", "/login/index.php"]], mapping={"title":0, "url":1})
 
-        # dispatcher.utter_message(text="Good morning, how can I help you today?")
-        dispatcher.utter_button_message(
-            "Good morning, fellas! How can I help you today? Choose any below or type your questions: ",
-            buttons)
+            dispatcher.utter_message(
+                text="{}. I'm GMoodle Bot. You need to login before asking questions :)".format(self.get_greeting()),
+                attachment=get_caurosel_dispatch_message(caurosel))
+
+        else:
+            buttons = []
+            random.shuffle(WELCOME_QUESTION)
+
+            for x in WELCOME_QUESTION[0:3]:
+                buttons.append(x)
+
+            # dispatcher.utter_message(text="Good morning, how can I help you today?")
+            dispatcher.utter_button_message(
+                "{}, fellas! How can I help you today? Choose any below or type your questions: ".format(self.get_greeting()),
+                buttons)
 
         return []
 
@@ -354,7 +395,6 @@ class ActionGetElearningDates(Action):
 					JOIN mdl_tag_instance ti ON ti.itemid = cm.id \
 					JOIN mdl_tag t ON t.id = ti.tagid AND t.name = \"online\" \
 					WHERE courseid = {} \
-					AND e.visible = 1 \
 					AND modulename=\"lesson\"".format(course_id)
 
         query_result = sql_query_result(sql_query)
@@ -393,9 +433,11 @@ class ActionGetElearningDates(Action):
                 "elements": caurosel_elements
             }
         }
-
-        dispatcher.utter_message(text="E-learning date are at...")
-        dispatcher.utter_message(attachment=output_carousel)
+        if len(caurosel_elements) > 0:
+            dispatcher.utter_message(text="E-learning date are at...")
+            dispatcher.utter_message(attachment=output_carousel)
+        else:
+            dispatcher.utter_message(text="No online lesson is available here")
         return []
 
 
@@ -409,7 +451,7 @@ class ActionGetCourseSchedule(Action):
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
-        sql_query = "SELECT  cm.id, e.name, e.timestart FROM moodle.mdl_event e \
+        sql_query = "SELECT  cm.id, e.name, e.timestart, m.name FROM moodle.mdl_event e \
 					JOIN mdl_modules m ON e.modulename = m.name \
 					JOIN mdl_course_modules cm ON e.instance = cm.instance AND cm.module = m.id AND cm.course = e.courseid \
 					WHERE courseid = {} \
@@ -430,8 +472,8 @@ class ActionGetCourseSchedule(Action):
             subtitle_tmp = schedule_datetime_tmp
             image_url_tmp = ""
             button_title_tmp = "Go to Link"
-            button_url_tmp = "/mod/assign/view.php?id={}".format(
-                schedule_id_tmp)
+            button_url_tmp = "/mod/{}/view.php?id={}".format(
+                x[3], schedule_id_tmp)
 
             caurosel_element = {
                 "title": title_tmp,
@@ -452,8 +494,6 @@ class ActionGetCourseSchedule(Action):
                 "elements": caurosel_elements
             }
         }
-
-        dispatcher.utter_message(text="This is the course schedule")
         dispatcher.utter_message(attachment=output_carousel)
 
         return []
@@ -513,9 +553,11 @@ class ActionGetClassActivityLessonN(Action):
                 "elements": caurosel_elements
             }
         }
-
-        dispatcher.utter_message(text="Class activity today")
-        dispatcher.utter_message(attachment=output_carousel)
+        if len(caurosel_elements) > 0:
+            dispatcher.utter_message(text="Here you are: ")
+            dispatcher.utter_message(attachment=output_carousel)
+        else:
+            dispatcher.utter_message(text="No class activity today")
 
         return []
 
@@ -552,7 +594,6 @@ class ActionGetTaskMissedLessonN(Action):
                             JOIN mdl_modules m ON m.name = \"lesson\" AND m.id = cm2.module \
                             JOIN mdl_lesson l ON l.id = cm2.instance \
                             WHERE cm2.course = cm.course \
-                            AND cm2.visible=1 \
                             ORDER BY l.available \
                             LIMIT 1 OFFSET {} \
                     ) \
@@ -787,7 +828,6 @@ class ActionGetGroupPresentationDatetime(Action):
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="Group Presentation are at...")
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
         user_id = get_user_id(tracker)
@@ -802,13 +842,17 @@ class ActionGetGroupPresentationDatetime(Action):
 
         schedule_list = []
         caurosel_elements = []
+        list_time = []
         for x in query_result:
             schedule_list.append(x)
             schedule_id_tmp = x[0]
             schedule_name_tmp = x[1]
             # schedule_name_tmp = "testing1234"
+
             schedule_datetime_tmp = datetime.fromtimestamp(x[2]).strftime(
                 "%Y-%m-%d %H:%M")
+            list_time.append(schedule_datetime_tmp)
+
             title_tmp = schedule_name_tmp
             subtitle_tmp = schedule_datetime_tmp
             image_url_tmp = ""
@@ -835,8 +879,10 @@ class ActionGetGroupPresentationDatetime(Action):
                 "elements": caurosel_elements
             }
         }
-
-        dispatcher.utter_message(attachment=output_carousel)
+        if len(caurosel_elements):
+            dispatcher.utter_message(text="You will be presenting on {}. Do reach out if you need any help from us! Look forward to your good work. ".format(", ".join(list_time)))
+        else:
+            dispatcher.utter_message(text="There is not presentation yet")
 
         return []
 
@@ -898,8 +944,11 @@ class ActionGetNextAssignmentDeadline(Action):
             }
         }
 
-        dispatcher.utter_message(text="Next Assignment Deadline are at...")
-        dispatcher.utter_message(attachment=output_carousel)
+        if len(caurosel_elements) > 0:
+            dispatcher.utter_message(text="Next Assignment Deadline are at...")
+            dispatcher.utter_message(attachment=output_carousel)
+        else:
+            dispatcher.utter_message(text="There is not assignment deadline yet")
 
         return []
 
@@ -958,7 +1007,7 @@ class ActionGetNextWeekLessonDatetime(Action):
             }
         }
 
-        dispatcher.utter_message(text="Next Lesson are at...")
+        dispatcher.utter_message(text="The next lesson is ...")
         dispatcher.utter_message(attachment=output_carousel)
 
         return []
@@ -974,7 +1023,7 @@ class ActionGetTutorInfo(Action):
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
-        sql_query = "SELECT CONCAT(u.firstname, \" \", u.lastname) as name, u.id \
+        sql_query = "SELECT CONCAT(u.firstname, \" \", u.lastname) as name, u.id , u.email\
 					FROM mdl_user u, mdl_role_assignments r, mdl_context cx, mdl_course c, mdl_role role \
 					WHERE u.id = r.userid \
 					AND r.contextid = cx.id \
@@ -992,7 +1041,7 @@ class ActionGetTutorInfo(Action):
             tutor_id_tmp = x[1]
             tutor_name_tmp = x[0]
             title_tmp = tutor_name_tmp
-            subtitle_tmp = ""
+            subtitle_tmp = x[2]
             image_url_tmp = ""
             button_title_tmp = "Go to Link"
             button_url_tmp = "/user/view.php?id={}&course={}".format(
@@ -1018,7 +1067,7 @@ class ActionGetTutorInfo(Action):
             }
         }
 
-        dispatcher.utter_message(text="Tutor contact is...")
+        dispatcher.utter_message(text="Here is the contact fo the tutors")
         dispatcher.utter_message(attachment=output_carousel)
 
         return []
@@ -1044,15 +1093,13 @@ class ActionGetLessonNTopic(Action):
 
         lesson_n_value_offset = int(lesson_n_value) - 1
 
-        dispatcher.utter_message(
-            text="Topic for lesson {} is...".format(lesson_n_value))
         course_id = get_course_id(tracker)
         user_id = get_user_id(tracker)
         sql_query = "SELECT name FROM mdl_course_sections \
 					JOIN ( \
 					SELECT cm.id as cm_id FROM mdl_lesson l \
 					JOIN mdl_modules m ON m.name = \"lesson\" \
-					JOIN mdl_course_modules cm ON l.id = cm.instance AND cm.module = m.id AND cm.visible = 1 AND cm.course={} \
+					JOIN mdl_course_modules cm ON l.id = cm.instance AND cm.module = m.id AND cm.course={} \
 					ORDER BY l.available \
 					LIMIT 1 OFFSET {} \
 					) tl \
@@ -1066,7 +1113,8 @@ class ActionGetLessonNTopic(Action):
         if (len(query_result) > 0):
             lesson_topic = query_result[0][0]
 
-            dispatcher.utter_message(text="{}".format(lesson_topic))
+            dispatcher.utter_message(text="Topic for lesson {} is {}".format(lesson_n_value,
+                                                                             lesson_topic))
         else:
             dispatcher.utter_message(text="No ans at this moment")
         return []
@@ -1081,7 +1129,6 @@ class ActionGetGroupInfo(Action):
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
 
-        dispatcher.utter_message(text="Group name is...")
         try:
             process_incoming_message(tracker)
             course_id = get_course_id(tracker)
@@ -1097,38 +1144,8 @@ class ActionGetGroupInfo(Action):
         except:
             dispatcher.utter_message(text="No ans at this moment")
         else:
-            dispatcher.utter_message(text=group_name)
+            dispatcher.utter_message(text="Your group is {}".format(group_name))
         return []
-
-
-'''
-class ActionGetGroupmateContact(Action):
-
-	def name(self) -> Text:
-		return "action_get_groupmates_contact"
-
-	def run(self, dispatcher: CollectingDispatcher,
-			tracker: Tracker,
-			domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-
-		dispatcher.utter_message(text="Your Groupmate contact is...")
-		process_incoming_message(tracker)
-		return []
-
-
-class ActionGetCourseGrade(Action):
-
-	def name(self) -> Text:
-		return "action_get_course_grade"
-
-	def run(self, dispatcher: CollectingDispatcher,
-			tracker: Tracker,
-			domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-
-		dispatcher.utter_message(text="Your grade in this course is...")
-		process_incoming_message(tracker)
-		return []
-'''
 
 
 class ActionGetCourseDiscussionParticipation(Action):
@@ -1185,10 +1202,8 @@ class ActionGetCourseDiscussionParticipation(Action):
             }
         }
 
-        dispatcher.utter_message(
-            text="Your discussion participation in this course is...")
         if (len(discussion_list) > 0):
-            dispatcher.utter_message(attachment=output_carousel)
+            dispatcher.utter_message(text="Here is the list of discussion you missed", attachment=output_carousel)
         else:
             dispatcher.utter_message(text="You have finished all discussion")
 
@@ -1320,9 +1335,9 @@ class ActionGetCourseLearningResourceBySectionID(Action):
         user_id = get_user_id(tracker)
         course_id = get_course_id(tracker)
 
-        #print(tracker.get_slot('section_id'))
-
         section_id = tracker.get_slot('section_id')
+        logging.error("section id: {}".format(tracker.get_slot('section_id')))
+
 
         cms = get_course_modules_by_section_id(course_id, section_id)
         caurosel_elements = get_caurosel_elements_from_cms(cms)
@@ -1703,8 +1718,7 @@ class ActionGetReplyPostStudent(Action):
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(
-            text="Who have replied my post? The answer is...")
+
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
         user_id = get_user_id(tracker)
@@ -1754,7 +1768,7 @@ class ActionGetReplyPostStudent(Action):
                 }
             }
 
-            dispatcher.utter_message(attachment=output_carousel)
+            dispatcher.utter_message(text="These students replied your post", attachment=output_carousel)
         else:
             dispatcher.utter_message(text="No one reply your post")
         return []
@@ -1852,7 +1866,7 @@ class ActionGetZoomLink(Action):
         course_id = get_course_id(tracker)
         sql_query = "SELECT cm.id cm_id, l.name, TRIM(Trailing '\"' FROM regexp_substr(l.intro, \"https://.*\\\"\")) link FROM mdl_lesson l \
 					JOIN mdl_modules m ON m.name = \"lesson\" \
-					JOIN mdl_course_modules cm ON cm.module = m.id AND cm.instance = l.id AND cm.visible=1 AND cm.course = {}\
+					JOIN mdl_course_modules cm ON cm.module = m.id AND cm.instance = l.id AND cm.course = {}\
 					JOIN moodle.mdl_tag_instance ti ON ti.itemid = cm.id \
 					JOIN mdl_tag t ON ti.tagid = t.id AND t.name=\"online\" \
 					WHERE l.available > unix_timestamp(now()) \
@@ -1905,18 +1919,41 @@ class ActionGetZoomLink(Action):
         return []
 
 
-def get_caurosel_elements_from_cms(cms):
+def get_caurosel_elements_from_cms(tuples, mapping={}, button_caption="Go to Link"):
+    # default mapping
+    #{
+    #   title: name
+    #   subtitle: null
+    #   url: url
+    #}
+    if "title" not in mapping:
+        mapping["title"] = "name"
+    if "url" not in mapping:
+        mapping["url"] = "url"
+
+
     ret = []
-    for cm in cms:
-        if "url" not in cm:
+    for cm in tuples:
+
+        if type(cm) is list:
+            cm = { i : cm[i] for i in range(0, len(cm) ) }
+
+        if mapping["url"] not in cm:
             continue
-        material_name_tmp = cm["name"]
-        material_url_tmp = cm["url"]
+        material_name_tmp = cm[mapping["title"]]
+        material_url_tmp = cm[mapping["url"]]
 
         title_tmp = material_name_tmp
+
         subtitle_tmp = ""
+        if "subtitle" in mapping:
+            subtitle_tmp = cm[mapping["subtitle"]]
+
         image_url_tmp = ""
-        button_title_tmp = "Go to Link"
+        if "image" in mapping:
+            image_url_tmp = cm[mapping["image"]]
+
+        button_title_tmp = button_caption
         button_url_tmp = material_url_tmp
 
         caurosel_element = {
@@ -1958,7 +1995,6 @@ class ActionGetLessonMaterial(Action):
 					JOIN mdl_modules m ON m.name = \"lesson\" AND m.id = cm2.module \
 					JOIN mdl_lesson l ON cm2.instance = l.id \
 					WHERE cm2.course = {} \
-					AND cm2.visible = 1 \
 					ORDER BY l.available \
 					LIMIT 1 OFFSET {}".format(course_id,
                                               lesson_n_value_offset - 1)
@@ -2012,7 +2048,6 @@ class ActionGetLastLessonMaterial(Action):
 					JOIN mdl_modules m ON m.name = \"lesson\" AND m.id = cm2.module \
 					JOIN mdl_lesson l ON cm2.instance = l.id \
 					WHERE cm2.course = {} \
-					AND cm2.visible = 1 \
 					ORDER BY l.available DESC \
 					LIMIT 1 OFFSET 0".format(course_id)
 
@@ -2061,7 +2096,7 @@ class ActionGetWikiContributionComparisonWithGroupmate(Action):
         course_id = get_course_id(tracker)
         user_id = get_user_id(tracker)
         sql_query = "SELECT user_id, final_rank, sum_score FROM ( \
-					SELECT a.user_id, RANK() OVER (ORDER BY SUM(ws.diff_score)DESC ) final_rank, SUM(ws.diff_score) sum_score \
+					SELECT a.user_id, RANK() OVER (ORDER BY SUM(ws.diff_score) DESC ) final_rank, SUM(ws.diff_score) sum_score \
 					FROM mdl_eduhk_wiki_diff_score ws \
 					INNER JOIN  mdl_eduhk_score a ON ws.eduhk_score_id = a.id \
 					INNER JOIN mdl_groups_members gm ON gm.userid = a.user_id \
@@ -2171,7 +2206,7 @@ class ActionGetGroupVacany(Action):
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
         user_id = get_user_id(tracker)
-        sql_query = "SELECT *  FROM moodle.mdl_choicegroup_options cgo \
+        sql_query = "SELECT g.name  FROM moodle.mdl_choicegroup_options cgo \
 						JOIN mdl_choicegroup cg ON cgo.choicegroupid = cg.id \
 						JOIN mdl_groups g ON cgo.groupid = g.id \
 						JOIN mdl_modules m ON m.name =\"choicegroup\" \
@@ -2207,11 +2242,41 @@ class ActionGetRepliedPostUpdate(Action):
     def name(self) -> Text:
         return "action_get_replied_post_update"
 
+    @classmethod
+    def get_caurosel(cls, course_id, user_id):
+        sql = """
+                SELECT DISTINCT fd.name, es1.event_url FROM mdl_eduhk_score es1
+        JOIN mdl_eduhk_score es2 ON es2.event_name = "\\\\mod_forum\\\\event\\\\post_created" AND es2.timemodified > es1.timemodified AND es2.cm_id = es1.cm_id AND es2.deleted = 0
+        JOIN mdl_forum_posts fp ON es1.event_object_id = fp.id
+        JOIN mdl_forum_discussions fd ON fp.discussion = fd.id
+        WHERE es1.event_name="\\\\mod_forum\\\\event\\\\post_created"
+        AND es1.user_id  = {}
+        AND es1.course_id = {}
+        AND es1.deleted = 0
+        ORDER BY es1.timemodified DESC
+                """.format(user_id, course_id)
+
+        sql_ret = sql_query_result(sql)
+
+        caursoel_data_objects = [{"name":x[0], "url":x[1]} for x in sql_ret]
+        return get_caurosel_elements_from_cms(caursoel_data_objects)
+
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="GetRepliedPostUpdate")
+
         process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        caurosel_elements = self.get_caurosel(course_id, user_id)
+
+        if len(caurosel_elements) > 0:
+            dispatcher.utter_message(attachment=get_caurosel_dispatch_message(
+                caurosel_elements))
+        else:
+            dispatcher.utter_message(
+                text="There is no reply for your post(s) yet")
         return []
 
 
@@ -2325,19 +2390,6 @@ class ActionGetGroupActivePerformance(Action):
                 text="{} is the least active in the group".format(
                     least_active_user_name))
 
-        return []
-
-
-class ActionGetMissedResource(Action):
-
-    def name(self) -> Text:
-        return "action_get_missed_resource"
-
-    def run(self, dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(text="ActionGetMissedResource")
-        process_incoming_message(tracker)
         return []
 
 
@@ -2513,12 +2565,10 @@ class ActionGetClassStudentCount(Action):
 
         query_result = sql_query_result(sql_query)
 
-        dispatcher.utter_message(
-            text="Number of student in this class is ......")
         if (len(query_result) > 0):
             class_student_cnt = query_result[0][0]
 
-            dispatcher.utter_message(text="{}".format(class_student_cnt))
+            dispatcher.utter_message(text="There are {} students in the class".format(class_student_cnt))
         else:
             dispatcher.utter_message(text="No ans at this moment")
         return []
@@ -2615,7 +2665,7 @@ class ActionGetLectureTime(Action):
         user_id = get_user_id(tracker)
         sql_query = "SELECT cm.id cm_id, l.name, l.available as timetimp FROM mdl_lesson l \
 					JOIN mdl_modules m ON m.name = \"lesson\" \
-					JOIN mdl_course_modules cm ON cm.module = m.id AND cm.instance = l.id AND cm.visible=1 \
+					JOIN mdl_course_modules cm ON cm.module = m.id AND cm.instance = l.id \
 					JOIN moodle.mdl_tag_instance ti ON ti.itemid = cm.id \
 					JOIN mdl_tag t ON ti.tagid = t.id AND t.name=\"online\" \
 					WHERE l.available > unix_timestamp(now()) \
@@ -2746,7 +2796,7 @@ class ActionGetCourseImportantDate(Action):
         if (len(event_list) > 0):
             dispatcher.utter_message(attachment=output_carousel)
         else:
-            dispatcher.utter_message(text="No ans at this moment")
+            dispatcher.utter_message(text="The class activities are not started yet")
         return []
 
 
@@ -2840,12 +2890,10 @@ class ActionGetClassActivityCountHighest(Action):
 
         query_result = sql_query_result(sql_query)
 
-        dispatcher.utter_message(
-            text="Accumulated No. of activities of class is ......")
         if (len(query_result) > 0):
             activities_cnt = query_result[0][0]
 
-            dispatcher.utter_message(text="{}".format(activities_cnt))
+            dispatcher.utter_message(text="The highest accumulated score of class is ".format(activities_cnt))
         else:
             dispatcher.utter_message(text="No ans at this moment")
         return []
@@ -2931,8 +2979,7 @@ class ActionGetGroupmateGroupN(Action):
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_message(
-            text="Groupmate for Group N are...")
+
         process_incoming_message(tracker)
 
         group_n_value = next(tracker.get_latest_entity_values('CARDINAL'),
@@ -2993,11 +3040,11 @@ class ActionGetGroupmateGroupN(Action):
                     "elements": caurosel_elements
                 }
             }
-
+            dispatcher.utter_message(text="Here is the student list of Group {}".format(group_n_value))
             dispatcher.utter_message(attachment=output_carousel)
 
         else:
-            dispatcher.utter_message(text="No answer at this moment")
+            dispatcher.utter_message(text="Sorry I can not find Group {}".format(group_n_value))
 
         return []
 
@@ -3010,7 +3057,6 @@ class ActionGetContributionScore(Action):
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
 
-        dispatcher.utter_message(text="ActionGetContributionScore")
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
         user_id = get_user_id(tracker)
@@ -3040,7 +3086,6 @@ class ActionGetGroupAllocationMethod(Action):
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
 
-        dispatcher.utter_message(text="ActionGetGroupAllocationMethod")
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
         user_id = get_user_id(tracker)
@@ -3085,7 +3130,7 @@ class ActionGetGroupAllocationMethod(Action):
                     "elements": caurosel_elements
                 }
             }
-
+            dispatcher.utter_message(text="You can join a group here ")
             dispatcher.utter_message(attachment=output_carousel)
         else:
             dispatcher.utter_message(text="No ans at this moment")
@@ -3507,5 +3552,366 @@ def request_course_modules(course_id: int, options: Dict = {}):
     return r
 
 
-if __name__ == '__main__':
-    ActionGetMaterialRecommendation.get_carousel_recommendation_by_user_course_id(1,27)
+class ActionGetActivitiesOfLesson(Action):
+
+    @classmethod
+    def get_caurosel(cls, course_id):
+        query_ret = sql_query_result("SELECT cm2.section " \
+                                     "FROM mdl_course_modules cm2 " \
+                                     "JOIN mdl_modules m ON m.name = \"lesson\" AND cm2.module = m.id " \
+                                     "JOIN mdl_tag_instance ti ON ti.itemid = cm2.id " \
+                                     "JOIN mdl_tag t ON t.name = \"online\" AND ti.tagid = t.id " \
+                                     "WHERE cm2.course = {} ".format(course_id))
+
+        cms = []
+        for row in query_ret:
+            section_id = row[0]
+            cms.extend(get_course_modules_by_section_id(course_id, section_id))
+
+        return get_caurosel_elements_from_cms(cms)
+
+
+    def name(self) -> Text:
+        return "action_get_activities_of_lesson"
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        caurosel_elements = self.get_caurosel(course_id)
+
+        if len(caurosel_elements) > 0 :
+            dispatcher.utter_message(attachment=get_caurosel_dispatch_message(
+                caurosel_elements))
+        else:
+            dispatcher.utter_message(text="There is no activities for the online lesson")
+        return []
+
+
+def get_column_from_query_ret(result, idx):
+    return [x[idx] for x in result]
+
+
+class ActionGetMissedResource(Action):
+
+    def name(self) -> Text:
+        return "action_get_missed_resource"
+
+    @classmethod
+    def get_caurosel(cls, course_id, user_id):
+        sql = """
+                SELECT cm.id
+                    FROM mdl_course_modules cm
+                    WHERE cm.visible = 1
+                    AND cm.course = {}
+                    AND cm.id NOT in (
+                    SELECT distinct es.cm_id 
+                    FROM mdl_eduhk_score es
+                    WHERE es.user_id = {}
+                    AND es.course_id = cm.course
+                    );
+                """.format(course_id, user_id)
+
+        sql_ret = sql_query_result(sql)
+
+        cm_ids = get_column_from_query_ret(sql_ret, 0)
+        caursoel_data_objects = get_course_modules(course_id, cm_ids)
+        return get_caurosel_elements_from_cms(caursoel_data_objects)
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        caurosel_elements = self.get_caurosel(course_id, user_id)
+
+        if len(caurosel_elements) > 0:
+            dispatcher.utter_message(text="Here is the list of resources you missed",
+                                     attachment=get_caurosel_dispatch_message(
+                caurosel_elements))
+        else:
+            dispatcher.utter_message(
+                text="There is no reply for your post(s) yet")
+        return []
+
+class ActionGetGroupmatesContract(Action):
+
+    def name(self) -> Text:
+        return "action_get_groupmates_contact"
+
+    @classmethod
+    def get_emails(cls, course_id, user_id):
+        sql = """
+                SELECT u.email
+FROM mdl_groups_members gm_target_group
+                        JOIN mdl_groups_members gm ON gm_target_group.groupid = gm.groupid
+                        JOIN mdl_groups g on g.id = gm_target_group.groupid
+                                            JOIN mdl_user u on u.id = gm.userid
+Where g.courseid  = {}
+AND gm_target_group.userid = {}
+                """.format(course_id, user_id)
+
+        sql_ret = sql_query_result(sql)
+
+        return get_column_from_query_ret(sql_ret, 0)
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        emails = self.get_emails(course_id, user_id)
+
+        if len(emails) == 0:
+            dispatcher.utter_message(text="You don't have groupmate yet")
+        else:
+            dispatcher.utter_message(
+                text="Here is the list of email: \n {} \n".format(
+                    "\n".join(emails)
+                ))
+        return []
+
+
+class ActionGetNumPostReplyByStudent(Action):
+
+    def name(self) -> Text:
+        return "action_get_post_reply_by_specific_student_count"
+
+    @classmethod
+    def get_num_reply(cls, course_id, name):
+        sql = """
+SELECT ifnull(u.id, 0),  COUNT(*)
+FROM mdl_forum_posts fp
+JOIN mdl_forum_discussions fd ON fp.discussion = fd.id
+JOIN mdl_user u ON fp.userid = u.id
+WHERE fp.parent > 0 
+AND fd.course = {} 
+AND LOWER(TRIM(CONCAT(u.lastname, " ", u.firstname))) LIKE LOWER(TRIM("{}"))
+                """.format(course_id, name)
+
+        sql_ret = sql_query_result(sql)
+
+        return sql_ret[0]
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+
+        name = next(tracker.get_latest_entity_values('PERSON'),None)
+
+        user_id_num_reply = self.get_num_reply(course_id, name)
+        user_id = user_id_num_reply[0]
+        num_reply = user_id_num_reply[1]
+
+        logging.error("DEBUG: user_id: {}, num_reply : {}, course_id:{}, name:{}\n".format(user_id, num_reply, course_id, name))
+
+        if user_id == 0:
+            dispatcher.utter_message(text="Sorry I do not know who is {}".format(name))
+        else:
+            if num_reply > 1:
+                dispatcher.utter_message(text="{} replies {} posts".format(name, num_reply))
+            else:
+                dispatcher.utter_message(text="{} replies {} post".format(name, num_reply))
+
+def check_user_if_exist_by_name(name):
+    sql = """
+    SELECT COUNT(*)
+    FROM mdl_user u
+    WHERE LOWER(TRIM(CONCAT(u.lastname, " ", u.firstname))) LIKE LOWER(TRIM("{}"))
+    """.format(name)
+    ret = sql_query_result(sql)[0][0]
+    return ret
+
+
+def get_sql_dateformat():
+    return "%Y-%m-%d %T"
+
+class ActionGetPostReplyByStudent(Action):
+
+    def name(self) -> Text:
+        return "action_get_post_reply_by_specific_student"
+
+    @classmethod
+    def get_caurosel(cls, course_id, name):
+        sql = """
+SELECT fd.name, es.event_url url, date_format(from_unixtime(es.timemodified), "{}") str_date
+FROM mdl_eduhk_score es 
+JOIN mdl_forum_posts fp ON fp.id = es.event_object_id
+JOIN mdl_forum_discussions fd ON fp.discussion = fd.id
+JOIN mdl_user u ON fp.userid = u.id
+WHERE fp.parent > 0 
+AND fd.course = {}
+AND LOWER(TRIM(CONCAT(u.lastname, " ", u.firstname))) LIKE LOWER(TRIM("{}"))
+AND es.event_name = "\\\\mod_forum\\\\event\\\\post_created"
+ORDER BY es.timemodified DESC
+                """.format(get_sql_dateformat(), course_id, name)
+
+        sql_ret = sql_query_result(sql)
+
+        ret = get_caurosel_elements_from_cms(sql_ret, mapping={"title":0,
+                                                               "url":1,
+                                                               "subtitle":2})
+
+        return ret
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+
+        name = next(tracker.get_latest_entity_values('PERSON'),None)
+
+        caurosel = self.get_caurosel(course_id, name)
+
+        if caurosel == 0:
+            if check_user_if_exist_by_name(name) == 0:
+                dispatcher.utter_message(text="Sorry I do not know who is {}".format(name))
+            else:
+                dispatcher.utter_message(
+                    text="{} does not reply any discussion yet".format(name))
+        else:
+            dispatcher.utter_message(
+                text="{} reply in following discussions".format(name), attachment=
+                    get_caurosel_dispatch_message(caurosel)
+            )
+
+
+class ActionGetNextLesson(Action):
+
+    def name(self) -> Text:
+        return "action_get_next_lesson"
+
+    @classmethod
+    def get_lesson_info(cls, course_id):
+        sql = """
+SELECT cm.id, e.name, date_format(from_unixtime(e.timestart),"{}"), CONCAT("/mod/lesson/view.php?id=", cm.id) FROM mdl_event e
+JOIN mdl_modules m ON m.name = "lesson" AND m.name = e.modulename
+JOIN mdl_course_modules cm ON cm.instance = e.instance AND m.id = cm.module
+WHERE e.courseid = 27
+AND e.timestart > unix_timestamp(now())
+AND eventtype = "open"
+AND e.visible = 1
+limit 1
+                """.format(get_sql_dateformat(), course_id)
+
+        sql_ret = sql_query_result(sql)
+
+        return sql_ret
+
+    def get_caurosel(self, lesson_info):
+        return get_caurosel_elements_from_cms(lesson_info, mapping={"title":1,
+                                                               "url":3,
+                                                               "subtitle":2})
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+
+        lesson_info = self.get_lesson_info(course_id)
+        if len(lesson_info) > 0:
+            dispatcher.utter_message(text="The date of next lesson is {}. You click the button below fore more information".format(lesson_info[0][2]),
+                                     attachment=get_caurosel_dispatch_message(self.get_caurosel(lesson_info)))
+        else:
+            dispatcher.utter_message(
+                text="There is no more lesson"
+            )
+        return []
+
+
+class ActionGetClassAvgContributionScore(Action):
+
+    def name(self) -> Text:
+        return "get_class_avg_contribution_score"
+
+    @classmethod
+    def get_score(cls, course_id):
+        sql = """
+SELECT avg(std_score)
+FROM (
+SELECT SUM(es.score) std_score
+FROM mdl_eduhk_score es 
+JOIN  mdl_user u ON es.user_id = u.id 
+JOIN mdl_role_assignments ra ON ra.userid = u.id
+JOIN mdl_context ct ON ct.id = ra.contextid
+JOIN mdl_course c ON c.id = ct.instanceid  AND  c.id = es.course_id
+JOIN mdl_role r ON r.id = ra.roleid AND r.shortname="student"
+WHERE es.course_id = {} AND es.deleted= 0
+GROUP BY es.user_id
+) tmp;
+                """.format(course_id)
+
+        sql_ret = sql_query_result(sql)
+
+        return sql_ret[0][0]
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+
+        dispatcher.utter_message(text="The average contribution score of the class is {:.2f}". format(self.get_score(course_id)))
+
+        return []
+
+class ActionGetDiscussionForumRaiseQuestions(Action):
+
+    def name(self) -> Text:
+        return "action_get_discussion_forum_raise_question_method"
+
+    @classmethod
+    def get_name_list(cls, course_id):
+        sql = """
+SELECT CONCAT(u.firstname, "" "", u.lastname) name, 
+CONCAT("/message/index.php?id=", u.id) url, 
+CONCAT("/user/pix.php/", u.id, "/f1.jpg") photo 
+FROM mdl_user u, mdl_role_assignments r, mdl_context cx, mdl_course c, mdl_role role
+WHERE u.id = r.userid
+AND r.contextid = cx.id
+AND cx.instanceid = c.id
+AND r.roleid = role.id 
+AND role.shortname like ("%teacher%")
+AND cx.contextlevel =50 AND c.id = {}
+""".format(course_id)
+
+        sql_ret = sql_query_result(sql)
+
+        return sql_ret
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+
+        users = self.get_name_list(course_id)
+
+        caurosels = get_caurosel_elements_from_cms(users,
+                                       {"title":0,
+                                       "url":1,
+                                       "image":2},
+                                       "Send Message")
+
+        dispatcher.utter_message(attachment=get_caurosel_dispatch_message(caurosels))
+        return []
+
+print(ActionGetGroupmatesContract.get_emails(24, 226))

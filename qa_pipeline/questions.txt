@@ -1,0 +1,138 @@
+question
+What is the weighting of assessments?
+What is the requirements of the group project?
+What is the language could be used in all assessments ?
+What is the word limit of the individual essay?
+What is the word limit of the post reflection?
+What are the contents/topics of each lesson?
+What programmes could register this course?
+What is the strand of this course?
+Any mid-terms and exams for this course?
+Where can I submit the assignments?
+What is the course code?
+What is the venue of the class?
+What is the day & time of the course?
+How can I find my course tutor?
+What are the dates of this course?
+What is the credit point of this course?
+Where can I get access to the course materials?
+May I know about the assessment rubrics of the assignments?
+What are the deadlines of assignments?
+What are the main issues/contents that I can learn in this course?
+Do I need to have any digital/technology background when I enrolled this course?
+Is it an interactive class?
+Any readings are suggested for enhancing my digital culture knowledge?
+How can I find/access the above suggested reading?
+I am not doing well in the group project. Can I still achieve a good grade in the course?
+Most of the topics are common in my daily lives like IG. Would it be dull in the course?
+What topic(s) can I choose for my individual essay?
+Any tips for achieving high grade in my essay?
+What is the medium of instruction (MOI) of this course?
+Which QF level does this course qualify?
+What are the course assessments and their weightings?
+How many contact hours does this course have?
+What is the venue of the class?
+Is there any pre-requisite requirements for this course?
+What are the recommended readings of the course?
+How many credit points does this course constitute?
+What is the course code?
+When is the first lecture?
+When is the last lecture?
+What is the day and time of the course?
+What can we learn from this course?
+What sort of teaching and learning activities do we have in the class?
+What are the requirements of the group project?
+How many people do I need to form a group?
+When are the deadlines of the group project?
+What is the word limit of the individual essay?
+When is the deadline of the individual essay?
+What are the requirements of the individual essay?
+For the critical reflection in the individual essay, can I use my groupwork as source of reflections?
+What is the essential elements of this course we learnt?
+Can I have an experience to practice my teaching skills in the course?
+Would it be too difficult for me to understand the course content?
+I am a VA/ music teacher. My school want me to apply STEM elements  in my subject knowledge. Can I benefit in the course?
+What reading(s) can I read if I want to have better understanding in the course?
+How can I find/access the above suggested reading?
+The course is designated for primary or secondary school teacher?
+Computational thinking seem quite vague. Any real-life examples can illustrate?
+Any conference or book can be listed for reference?
+Does the course has pre-requisite course?
+What is the level of the course?
+Which programming language will be taught in this course?
+What are subject synopsis?
+What are the assessment methods?
+What is the workload of the course?
+When is the lecture time?
+When is the end of the course?
+When is the first class?
+What is the reading list of the course?
+Where is the lecturer's office?
+What are the objectives of this course?
+What can I learn from this course?
+What is the teaching methodology of the course?
+What is the credit value of the course?
+What is teaching language in this course?
+What book can I read to reinforce my subject knowledge?
+Can I choose not to attend lab?
+Whcih four components will be learnt in the course?
+I want to know more about C Programming. Any online reference I can visit?
+Any past paper(s)/resources in the course can provide?
+How can I pass the course?
+What topic will the individual lecture cover?
+What is Day and Time of this course?
+What is the venue of this course?
+How can I contact my tutor?
+Where is the tutor’s office？
+What is the course schedule?
+What are the topics of each lesson?
+When is the first lesson?
+When is the last lesson?
+When is the Poster Presentation?
+What is the deadline of Individual Essay?
+When are the e-learning/Independent learning sessions?
+What is the deadline of Peer feedback on poster presentation?
+What do I need to do in Poster presentaion?
+What do I need to do in Individual Essay?
+When is the Workshop on Individual Essay?
+When do I need to find my partner for Poster Presentation?
+Any consultation for the Poster Presentation?
+Any consultation for th Individual Assignment?
+How can I get high mark in Poster presentation?
+What is the criteria of good design of reading tasks?
+What is the criteria of presentation and organisation?
+How can I get high mark in Individual Essay?
+What is the criteria of good analysis of reading tasks and recommendations?
+What is the criteria of good understanding and integration of theories?
+What is the criteria of good language and organisation?
+What is the deadline of Poster Presentation?
+What is the word limit of Individual Essay?
+Any limitation of choosing specific group of learners in Individual Essay?
+How many classroom activities and/or assessment need to include in Poster presentation?
+"What does it mean 'Engage in critical dialogue with your peers at the
+“Academic Conference on ESL Reading”?"
+What are the recommended readings?
+Any related journals for this course?
+Any related web resources for this course?
+Any required text for this course?
+Where can I submit my Individual Essay?
+Any specific format for my Indivudual Essay?
+"What is the lanuage need to be used in doing the homework?
+Can I use Chinese?"
+What is the weighting of Assessment Tasks?
+Any quiz/test for this course?
+What is the ultimate goal of the course?
+What can I gain after completing the course?
+What topic(s) will the course cover?
+Any model(s) of reading will be learnt?
+Is it an interactive class?
+Any attendance requirement?
+How can I better prepare for class participation ?
+Any penalties for late submission of my assignment?
+Glossary/ Definition
+Assessment marking criteria (expectation)
+keywords/ topics mapping lecture notes
+extra exercises for each topic (show the progress)
+Active questions (integrate into chatbot) Do you want to take a challenge? (idle/ browse 5min)
+Do you want to take a challenge?
+Show past group/ individual topics
