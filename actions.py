@@ -42,7 +42,7 @@ WELCOME_QUESTION = [
     },
     {
         "title": "What is the average contribution score in the class?",
-        "payload": "/gmoodle_wiki_contribution_comparison_with_overall_enquiry"
+        "payload": "/gmoodle_contribution_score_avg_class"
     },
     {
         "title": "When will be the next lesson?",
@@ -451,50 +451,25 @@ class ActionGetCourseSchedule(Action):
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
-        sql_query = "SELECT  cm.id, e.name, e.timestart, m.name FROM moodle.mdl_event e \
-					JOIN mdl_modules m ON e.modulename = m.name \
-					JOIN mdl_course_modules cm ON e.instance = cm.instance AND cm.module = m.id AND cm.course = e.courseid \
-					WHERE courseid = {} \
-					AND e.visible = 1 \
-					ORDER BY e.timestart".format(course_id)
+        sql_query = """
+                    SELECT  cm.id, e.name, date_format(from_unixtime(e.timestart),"{}") as timestart, m.name FROM moodle.mdl_event e 
+					JOIN mdl_modules m ON e.modulename = m.name 
+					JOIN mdl_course_modules cm ON e.instance = cm.instance AND cm.module = m.id AND cm.course = e.courseid 
+					WHERE courseid = {} 
+					AND (e.visible = 1 or m.name = "lesson")
+					ORDER BY e.timestart
+					""".format(get_sql_dateformat(), course_id)
+
 
         query_result = sql_query_result(sql_query)
+        cm_ids = get_column_from_query_ret(query_result, 0)
+        if len(cm_ids) > 0:
+            caursoel_data_objects = get_course_modules(course_id, cm_ids)
+            caurosel_elements = get_caurosel_elements_from_cms(caursoel_data_objects)
 
-        schedule_list = []
-        caurosel_elements = []
-        for x in query_result:
-            schedule_list.append(x)
-            schedule_id_tmp = x[0]
-            schedule_name_tmp = x[1]
-            schedule_datetime_tmp = datetime.fromtimestamp(x[2]).strftime(
-                "%Y-%m-%d %H:%M")
-            title_tmp = schedule_name_tmp
-            subtitle_tmp = schedule_datetime_tmp
-            image_url_tmp = ""
-            button_title_tmp = "Go to Link"
-            button_url_tmp = "/mod/{}/view.php?id={}".format(
-                x[3], schedule_id_tmp)
-
-            caurosel_element = {
-                "title": title_tmp,
-                "subtitle": subtitle_tmp,
-                "image_url": image_url_tmp,
-                "buttons": [{
-                    "title": button_title_tmp,
-                    "url": button_url_tmp,
-                    "type": "web_url"
-                }]
-            }
-            caurosel_elements.append(caurosel_element)
-
-        output_carousel = {
-            "type": "template",
-            "payload": {
-                "template_type": "generic",
-                "elements": caurosel_elements
-            }
-        }
-        dispatcher.utter_message(attachment=output_carousel)
+            dispatcher.utter_message(text="Here is the course schedule", attachment=get_caurosel_dispatch_message(caurosel_elements))
+        else:
+            dispatcher.utter_message(text="No schedule for this course yet")
 
         return []
 
@@ -800,22 +775,18 @@ class ActionGetFormGroupDeadline(Action):
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
 
-        dispatcher.utter_message(text="Form group deadline are...")
-        try:
-            process_incoming_message(tracker)
-            course_id = get_course_id(tracker)
-            sql_query = "Select timeclose FROM mdl_choicegroup WHERE course={}".format(
-                course_id)
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        sql_query = """
+            Select date_format(from_unixtime(timeclose),"{}") FROM mdl_choicegroup WHERE course={} AND timeclose > 0
+            """.format(get_sql_dateformat(), course_id)
 
-            query_result = sql_query_result(sql_query)
+        query_result = sql_query_result(sql_query)
 
-            deadline_unixtimestamp = query_result[0][0]
-            deadline_dt = datetime.fromtimestamp(
-                deadline_unixtimestamp).strftime("%Y-%m-%d %H:%M")
-        except:
-            dispatcher.utter_message(text="No ans at this moment")
+        if len(query_result) > 0 :
+            dispatcher.utter_message(text="The deadline of forming group is {}".format(query_result[0][0]))
         else:
-            dispatcher.utter_message(text=deadline_dt)
+            dispatcher.utter_message(text="There is no deadline for forming group yet")
 
         return []
 
@@ -957,60 +928,117 @@ class ActionGetNextWeekLessonDatetime(Action):
 
     def name(self) -> Text:
         return "action_get_next_week_lesson_datetime"
+    #
+    # def run(self, dispatcher: CollectingDispatcher,
+    #     tracker: Tracker,
+    #     domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+    #     process_incoming_message(tracker)
+    #     course_id = get_course_id(tracker)
+    #     # sql_query = "SELECT  cm.id, e.name, e.timestart FROM moodle.mdl_event e \
+	# 	# 			JOIN mdl_modules m ON e.modulename = m.name \
+	# 	# 			JOIN mdl_course_modules cm ON e.instance = cm.instance AND cm.module = m.id AND cm.course = e.courseid \
+	# 	# 			WHERE courseid = {} \
+	# 	# 			AND modulename=\"lesson\" \
+	# 	# 			AND YEARWEEK(NOW(),3)+1 = YEARWEEK(from_unixtime(timestart),3)".format(
+    #     #     course_id)
+    #     sql = """
+    #     SELECT cm.id, e.name, date_format(from_unixtime(e.timestart),"{}"), CONCAT("/course/view.php?id=", cm.course, "#section-", cs.section) FROM mdl_event e
+    #     JOIN mdl_modules m ON m.name = "lesson" AND m.name = e.modulename
+    #     JOIN mdl_course_modules cm ON cm.instance = e.instance AND m.id = cm.module
+    #     JOIN mdl_course_sections cs ON cm.section = cs.id
+    #     WHERE e.courseid = {}
+    #     AND YEARWEEK(NOW(),3)+1 = YEARWEEK(from_unixtime(timestart),3)
+    #     AND eventtype = "open"
+    #     ORDER BY e.timestart
+    #     limit 1
+    #                     """.format(get_sql_dateformat(), course_id)
+    #
+    #     query_result = sql_query_result(sql_query)
+    #
+    #     lesson_list = []
+    #     caurosel_elements = []
+    #     for x in query_result:
+    #         lesson_list.append(x)
+    #         lesson_id_tmp = x[0]
+    #         lesson_name_tmp = x[1]
+    #         lesson_datetime_tmp = datetime.fromtimestamp(x[2]).strftime(
+    #             "%Y-%m-%d %H:%M")
+    #         title_tmp = lesson_name_tmp
+    #         subtitle_tmp = lesson_datetime_tmp
+    #         image_url_tmp = ""
+    #         button_title_tmp = "Go to Link"
+    #         button_url_tmp = "/mod/lesson/view.php?id={}".format(lesson_id_tmp)
+    #
+    #         caurosel_element = {
+    #             "title": title_tmp,
+    #             "subtitle": subtitle_tmp,
+    #             "image_url": image_url_tmp,
+    #             "buttons": [{
+    #                 "title": button_title_tmp,
+    #                 "url": button_url_tmp,
+    #                 "type": "web_url"
+    #             }]
+    #         }
+    #         caurosel_elements.append(caurosel_element)
+    #
+    #     output_carousel = {
+    #         "type": "template",
+    #         "payload": {
+    #             "template_type": "generic",
+    #             "elements": caurosel_elements
+    #         }
+    #     }
+    #
+    #     dispatcher.utter_message(text="The next lesson is ...")
+    #     dispatcher.utter_message(attachment=output_carousel)
+    #
+    #     return []
+
+    @classmethod
+    def get_lesson_info(cls, course_id):
+        sql = """
+SELECT cm.id, e.name, date_format(from_unixtime(e.timestart),"{}"), CONCAT("/course/view.php?id=", cm.course, "#section-", cs.section) FROM mdl_event e
+JOIN mdl_modules m ON m.name = "lesson" AND m.name = e.modulename
+JOIN mdl_course_modules cm ON cm.instance = e.instance AND m.id = cm.module
+JOIN mdl_course_sections cs ON cm.section = cs.id 
+WHERE e.courseid = {}
+AND YEARWEEK(NOW(),3)+1 = YEARWEEK(from_unixtime(timestart),3)
+AND eventtype = "open"
+ORDER BY e.timestart
+                """.format(get_sql_dateformat(), course_id)
+
+        sql_ret = sql_query_result(sql)
+
+        return sql_ret
+
+    def get_caurosel(self, lesson_info):
+        return get_caurosel_elements_from_cms(lesson_info, mapping={"title":1,
+                                                               "url":3,
+                                                               "subtitle":2})
 
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
-        sql_query = "SELECT  cm.id, e.name, e.timestart FROM moodle.mdl_event e \
-					JOIN mdl_modules m ON e.modulename = m.name \
-					JOIN mdl_course_modules cm ON e.instance = cm.instance AND cm.module = m.id AND cm.course = e.courseid \
-					WHERE courseid = {} \
-					AND modulename=\"lesson\" \
-					AND YEARWEEK(NOW(),3)+1 = YEARWEEK(from_unixtime(timestart),3)".format(
-            course_id)
 
-        query_result = sql_query_result(sql_query)
-
-        lesson_list = []
-        caurosel_elements = []
-        for x in query_result:
-            lesson_list.append(x)
-            lesson_id_tmp = x[0]
-            lesson_name_tmp = x[1]
-            lesson_datetime_tmp = datetime.fromtimestamp(x[2]).strftime(
-                "%Y-%m-%d %H:%M")
-            title_tmp = lesson_name_tmp
-            subtitle_tmp = lesson_datetime_tmp
-            image_url_tmp = ""
-            button_title_tmp = "Go to Link"
-            button_url_tmp = "/mod/lesson/view.php?id={}".format(lesson_id_tmp)
-
-            caurosel_element = {
-                "title": title_tmp,
-                "subtitle": subtitle_tmp,
-                "image_url": image_url_tmp,
-                "buttons": [{
-                    "title": button_title_tmp,
-                    "url": button_url_tmp,
-                    "type": "web_url"
-                }]
-            }
-            caurosel_elements.append(caurosel_element)
-
-        output_carousel = {
-            "type": "template",
-            "payload": {
-                "template_type": "generic",
-                "elements": caurosel_elements
-            }
-        }
-
-        dispatcher.utter_message(text="The next lesson is ...")
-        dispatcher.utter_message(attachment=output_carousel)
-
+        lesson_info = self.get_lesson_info(course_id)
+        if len(lesson_info) == 1:
+            dispatcher.utter_message(text="Here is the lesson of next week. You click the button below fore more information".format(lesson_info[0][2]),
+                                     attachment=get_caurosel_dispatch_message(self.get_caurosel(lesson_info)))
+        elif len(lesson_info) > 1:
+            dispatcher.utter_message(
+                text="Here are the lessons of next week. You click the button below fore more information".format(
+                    lesson_info[0][2]),
+                attachment=get_caurosel_dispatch_message(
+                    self.get_caurosel(lesson_info)))
+        else:
+            dispatcher.utter_message(
+                text="There is no more lesson"
+            )
         return []
+
 
 
 class ActionGetTutorInfo(Action):
@@ -1067,7 +1095,7 @@ class ActionGetTutorInfo(Action):
             }
         }
 
-        dispatcher.utter_message(text="Here is the contact fo the tutors")
+        dispatcher.utter_message(text="Here is the contact of the tutors")
         dispatcher.utter_message(attachment=output_carousel)
 
         return []
@@ -1704,13 +1732,36 @@ class ActionGetTaskCompletion(Action):
             pass
 
         dispatcher.utter_message(
-            text="Your current contribution score is {0:.1%}. Keep it up!".format(
+            text="Your current participate rate is {0:.1%}. Keep it up!".format(
                 participate_rate))
 
         return []
 
 
 class ActionGetReplyPostStudent(Action):
+    @classmethod
+    def get_data(cls, user_id, course_id):
+        sql_query = """
+                                   SELECT u.id as userid, 
+                                       CONCAT(u.lastname, "", u.firstname) as name, 
+                                       CONCAT("/user/view.php?id=", u.id) as url, 
+                                       CONCAT("/user/pix.php/",u.id,"/f1.jpg") as image
+                                   FROM mdl_user u 
+                                   WHERE u.id in ( 
+                                   SELECT distinct fp.userid 
+                                   FROM mdl_forum_discussions fd 
+                                   JOIN mdl_forum_posts fp ON (fp.discussion = fd.id AND fp.userid <> fd.userid) 
+                                   WHERE fd.userid = {} 
+                                   AND fd.course = {})
+                                   """.format(user_id, course_id)
+
+        query_result = sql_query_result(sql_query)
+        carousels = get_caurosel_elements_from_cms(query_result,
+                                                   {"title": 1,
+                                                    "image": 3,
+                                                    "url": 2},
+                                                   "Go to profile")
+        return carousels
 
     def name(self) -> Text:
         return "action_get_reply_post_student"
@@ -1722,53 +1773,10 @@ class ActionGetReplyPostStudent(Action):
         process_incoming_message(tracker)
         course_id = get_course_id(tracker)
         user_id = get_user_id(tracker)
-        sql_query = "SELECT u.id as userid, CONCAT(u.lastname, \" \", u.firstname) as name \
-                    FROM mdl_user u \
-                    WHERE u.id in ( \
-                    SELECT distinct fp.userid \
-                    FROM mdl_forum_discussions fd \
-                    JOIN mdl_forum_posts fp ON (fp.discussion = fd.id AND fp.userid <> fd.userid) \
-                    WHERE fd.userid = {} \
-                    AND fd.course = {})".format(user_id, course_id)
+        carousels = self.get_data(user_id, course_id)
 
-        query_result = sql_query_result(sql_query)
-
-        if(len(query_result) > 0):
-            user_list = []
-            caurosel_elements = []
-            for x in query_result:
-                user_list.append(x)
-                user_id_tmp = x[0]
-                user_name_tmp = x[1]
-                user_link_url_tmp = "/user/index.php?id={}".format(user_id)
-                user_photo_url_tmp = "user/pix.php/{}/f1.jpg".format(user_id)
-                title_tmp = user_name_tmp
-                subtitle_tmp = ""
-                image_url_tmp = user_photo_url_tmp
-                button_title_tmp = "Go to Link"
-                button_url_tmp = user_link_url_tmp
-
-                caurosel_element = {
-                    "title": title_tmp,
-                    "subtitle": subtitle_tmp,
-                    "image_url": image_url_tmp,
-                    "buttons": [{
-                        "title": button_title_tmp,
-                        "url": button_url_tmp,
-                        "type": "web_url"
-                    }]
-                }
-                caurosel_elements.append(caurosel_element)
-
-            output_carousel = {
-                "type": "template",
-                "payload": {
-                    "template_type": "generic",
-                    "elements": caurosel_elements
-                }
-            }
-
-            dispatcher.utter_message(text="These students replied your post", attachment=output_carousel)
+        if len(carousels) > 0:
+            dispatcher.utter_message(text="These students replied your post", attachment=get_caurosel_dispatch_message(carousels))
         else:
             dispatcher.utter_message(text="No one reply your post")
         return []
@@ -2117,7 +2125,7 @@ class ActionGetWikiContributionComparisonWithGroupmate(Action):
             score = query_result[0][2]
 
             dispatcher.utter_message(
-                text="Your contribution score is {}. You are {} in your group. Keep going".format(
+                text="Your wiki contribution score is {}. You are {} in your group. Keep going".format(
                     score, final_rank))
         else:
             dispatcher.utter_message(text="No Rank for you")
@@ -2157,7 +2165,7 @@ class ActionGetWikiContributionComparisonWithOverall(Action):
             score = query_result[0][2]
 
             dispatcher.utter_message(
-                text="Your contribution score is {}. You are {} in your class. Keep going".format(
+                text="Your wiki contribution score is {}. You are {} in your class. Keep going".format(
                     score, final_rank))
         else:
             dispatcher.utter_message(text="No Rank for you")
@@ -3068,7 +3076,8 @@ class ActionGetContributionScore(Action):
 
         query_result = sql_query_result(sql_query)
 
-        if (len(query_result) > 0):
+        score = query_result[0][0]
+        if (score is not None):
             score = query_result[0][0]
 
             dispatcher.utter_message(
@@ -3516,7 +3525,11 @@ def get_course_modules(course_id, cm_ids: List[int]):
     # trans the section and cm
     for section in cms:
         for cm in section["modules"]:
-            if cm["id"] in cm_ids and cm["visible"] == 1:
+            if cm["id"] in cm_ids and ( cm["visible"] == 1 or cm["modname"] == "lesson" ):
+                cm["section"] = section
+
+                if cm["modname"] == "lesson":
+                    cm["url"] = "/course/view.php?id={}#section-{}".format(course_id, cm["section"]["section"])
                 ret.append(cm)
 
     return ret
@@ -3798,13 +3811,14 @@ class ActionGetNextLesson(Action):
     @classmethod
     def get_lesson_info(cls, course_id):
         sql = """
-SELECT cm.id, e.name, date_format(from_unixtime(e.timestart),"{}"), CONCAT("/mod/lesson/view.php?id=", cm.id) FROM mdl_event e
+SELECT cm.id, e.name, date_format(from_unixtime(e.timestart),"{}"), CONCAT("/course/view.php?id=", cm.course, "#section-", cs.section) FROM mdl_event e
 JOIN mdl_modules m ON m.name = "lesson" AND m.name = e.modulename
 JOIN mdl_course_modules cm ON cm.instance = e.instance AND m.id = cm.module
-WHERE e.courseid = 27
+JOIN mdl_course_sections cs ON cm.section = cs.id 
+WHERE e.courseid = {}
 AND e.timestart > unix_timestamp(now())
 AND eventtype = "open"
-AND e.visible = 1
+ORDER BY e.timestart
 limit 1
                 """.format(get_sql_dateformat(), course_id)
 
@@ -3835,19 +3849,105 @@ limit 1
         return []
 
 
-class ActionGetClassAvgContributionScore(Action):
+class ActionContributionScoreGroupRankSelf(Action):
 
     def name(self) -> Text:
-        return "get_class_avg_contribution_score"
+        return "action_contribution_score_group_rank_self"
 
     @classmethod
-    def get_score(cls, course_id):
+    def get_score(cls, course_id, user_id):
+        sql = """
+SELECT user_id, final_rank, sum_score FROM (
+SELECT a.user_id, RANK() OVER (ORDER BY SUM(a.score) DESC ) final_rank, SUM(a.score) sum_score
+FROM mdl_eduhk_score a
+INNER JOIN mdl_groups_members gm ON gm.userid = a.user_id 
+INNER JOIN mdl_groups_members gmt ON gm.groupid = gmt.groupid AND gmt.userid = {} 
+INNER JOIN mdl_groups g on g.id = gm.groupid AND g.courseid = a.course_id 
+WHERE a.course_id = {} 
+AND deleted = 0 
+GROUP BY a.user_id 
+ORDER BY sum_score DESC 
+) ranking WHERE user_id = {}
+                """.format(user_id, course_id, user_id)
+
+        sql_ret = sql_query_result(sql)
+
+        rank = sql_ret[0][1]
+        score = sql_ret[0][2]
+        return (rank, score)
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        rank, score = self.get_score(course_id, user_id)
+
+        dispatcher.utter_message(text="Your contribution score is {}. You are {} in your group. Keep going"
+                                 . format(score, rank))
+
+        return []
+
+
+class ActionContributionScoreClassRankSelf(Action):
+
+    def name(self) -> Text:
+        return "action_contribution_score_class_rank_self"
+
+    @classmethod
+    def get_score(cls, course_id, user_id):
+        sql = """
+SELECT user_id, final_rank, sum_score FROM (
+SELECT a.user_id, RANK() OVER (ORDER BY SUM(a.score) DESC ) final_rank, SUM(a.score) sum_score
+FROM mdl_eduhk_score a
+WHERE a.course_id = {} 
+AND deleted = 0 
+GROUP BY a.user_id 
+ORDER BY sum_score DESC 
+) ranking WHERE user_id = {}
+                """.format(course_id, user_id)
+
+        sql_ret = sql_query_result(sql)
+
+        rank = sql_ret[0][1]
+        score = sql_ret[0][2]
+        return (rank, score)
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        rank, score = self.get_score(course_id, user_id)
+
+        dispatcher.utter_message(
+            text="Your contribution score is {}. You are {} in the class. Keep going"
+            .format(score, rank))
+        return []
+
+
+class ActionGetGroupAvgContributionScore(Action):
+
+    def name(self) -> Text:
+        return "action_get_group_avg_contribution_score"
+
+    @classmethod
+    def get_score(cls, course_id, user_id):
         sql = """
 SELECT avg(std_score)
 FROM (
 SELECT SUM(es.score) std_score
 FROM mdl_eduhk_score es 
-JOIN  mdl_user u ON es.user_id = u.id 
+JOIN mdl_user u ON es.user_id = u.id 
+JOIN mdl_groups_members gm ON gm.userid = es.user_id
+JOIN mdl_groups g on g.id = gm.groupid AND g.courseid = es.course_id
+JOIN mdl_groups_members tgm ON tgm.userid = {} AND tgm.groupid = gm.groupid
 JOIN mdl_role_assignments ra ON ra.userid = u.id
 JOIN mdl_context ct ON ct.id = ra.contextid
 JOIN mdl_course c ON c.id = ct.instanceid  AND  c.id = es.course_id
@@ -3855,7 +3955,45 @@ JOIN mdl_role r ON r.id = ra.roleid AND r.shortname="student"
 WHERE es.course_id = {} AND es.deleted= 0
 GROUP BY es.user_id
 ) tmp;
-                """.format(course_id)
+                """.format(user_id, course_id)
+
+        sql_ret = sql_query_result(sql)
+
+        return sql_ret[0][0]
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        dispatcher.utter_message(text="The average contribution score of your group is {:.2f}". format(self.get_score(course_id, user_id)))
+
+        return []
+
+
+class ActionGetClassAvgContributionScore(Action):
+
+    def name(self) -> Text:
+        return "action_contribution_score_avg_class"
+
+    @classmethod
+    def get_score(cls, course_id):
+        sql = """
+SELECT avg(IFNULL(std_score,0))
+FROM (
+SELECT SUM(es.score) std_score
+FROM mdl_user u 
+LEFT OUTER JOIN mdl_eduhk_score es  ON es.user_id = u.id  AND  es.course_id={} AND es.deleted= 0
+JOIN mdl_role_assignments ra ON ra.userid = u.id
+JOIN mdl_context ct ON ct.id = ra.contextid
+JOIN mdl_course c ON c.id = ct.instanceid  AND  c.id = {}
+JOIN mdl_role r ON r.id = ra.roleid AND r.shortname="student"
+GROUP BY u.id
+) tmp;
+                """.format(course_id, course_id)
 
         sql_ret = sql_query_result(sql)
 
@@ -3871,6 +4009,7 @@ GROUP BY es.user_id
         dispatcher.utter_message(text="The average contribution score of the class is {:.2f}". format(self.get_score(course_id)))
 
         return []
+
 
 class ActionGetDiscussionForumRaiseQuestions(Action):
 
@@ -3914,4 +4053,57 @@ AND cx.contextlevel =50 AND c.id = {}
         dispatcher.utter_message(attachment=get_caurosel_dispatch_message(caurosels))
         return []
 
-print(ActionGetGroupmatesContract.get_emails(24, 226))
+
+class ActionGetQuizGrade(Action):
+
+    def name(self) -> Text:
+        return "action_get_quiz_grade"
+
+    @classmethod
+    def get_quiz_resut(cls, course_id, user_id):
+        sql = """
+SELECT q.name, IF(ISNULL(qa.attempt), "Not Done", CONCAT("Grade: ",qg.grade))
+FROM 
+mdl_role_assignments AS r 
+JOIN mdl_user AS u on r.userid = u.id 
+JOIN mdl_role AS rn on r.roleid = rn.id AND  rn.shortname = 'student'
+JOIN mdl_context AS ctx on r.contextid = ctx.id 
+JOIN mdl_course AS c on ctx.instanceid = c.id 
+JOIN mdl_quiz q on  q.timeclose < unix_timestamp(now()) AND q.timeclose > 0 AND q.course = c.id 
+LEFT JOIN mdl_quiz_attempts qa ON  qa.quiz = q.id AND qa.userid = u.id
+LEFT JOIN mdl_quiz_grades qg ON qg.userid = u.id AND  qg.quiz = qa.quiz 
+WHERE 
+	c.id = {}
+    AND u.id = {};    
+""".format(course_id, user_id)
+
+        sql_ret = sql_query_result(sql)
+
+        return sql_ret
+
+    def run(self, dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        process_incoming_message(tracker)
+        course_id = get_course_id(tracker)
+        user_id = get_user_id(tracker)
+
+        quizs = self.get_quiz_resut(course_id, user_id)
+
+        if len(quizs) == 0:
+            result = "There is no quiz graded yet"
+        elif len(quizs) == 1:
+            result = "Here is the result of quiz:\n"
+        else:
+            result = "Here are the results of quiz:\n"
+
+        dispatcher.utter_message(text=result)
+
+        for quiz in quizs:
+            name = quiz[0]
+            grade = quiz[1]
+
+            result = "{}, {}\n".format(name, grade)
+
+            dispatcher.utter_message(text=result)
+        return []
