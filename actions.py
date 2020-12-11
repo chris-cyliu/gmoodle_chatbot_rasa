@@ -50,6 +50,24 @@ WELCOME_QUESTION = [
     }
 ]
 
+def get_course_modules(course_id, cm_ids: List[int]):
+    r = request_course_modules(course_id)
+
+    cms = json.loads(r.text)
+
+    ret = []
+    # trans the section and cm
+    for section in cms:
+        for cm in section["modules"]:
+            if cm["id"] in cm_ids and ( cm["visible"] == 1 or cm["modname"] == "lesson" ):
+                cm["section"] = section
+
+                if cm["modname"] == "lesson":
+                    cm["url"] = "/course/view.php?id={}#section-{}".format(course_id, cm["section"]["section"])
+                ret.append(cm)
+
+    return ret
+
 
 class ActionHelloWorld(Action):
 
@@ -162,6 +180,8 @@ def get_course_id(tracker):
 
 class ActionGetStarted(Action):
 
+    USE_RECOMMENDATION = True
+
     def get_greeting(self):
         now = datetime.now()
         hour = now.hour
@@ -180,6 +200,7 @@ class ActionGetStarted(Action):
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         process_incoming_message(tracker)
         user_id = get_user_id(tracker)
+        course_id = get_course_id(tracker)
 
         if user_id == 0:
             caurosel = get_caurosel_elements_from_cms([["Login", "/login/index.php"]], mapping={"title":0, "url":1})
@@ -187,18 +208,39 @@ class ActionGetStarted(Action):
             dispatcher.utter_message(
                 text="{}. I'm GMoodle Bot. You need to login before asking questions :)".format(self.get_greeting()),
                 attachment=get_caurosel_dispatch_message(caurosel))
+            return []
 
-        else:
-            buttons = []
-            random.shuffle(WELCOME_QUESTION)
+        if course_id == 0:
+            dispatcher.utter_message(
+                text="{}. I'm GMoodle Bot. Please go to one of the course to ask further questions".format(
+                    self.get_greeting()))
+            return []
 
-            for x in WELCOME_QUESTION[0:3]:
-                buttons.append(x)
+        buttons = []
+        random.shuffle(WELCOME_QUESTION)
 
-            # dispatcher.utter_message(text="Good morning, how can I help you today?")
-            dispatcher.utter_button_message(
-                "{}, fellas! How can I help you today? Choose any below or type your questions: ".format(self.get_greeting()),
-                buttons)
+        for x in WELCOME_QUESTION[0:3]:
+            buttons.append(x)
+
+        if self.USE_RECOMMENDATION:
+            recommended_carousel, is_default, has_rule = ActionGetMaterialRecommendation.get_carousel_recommendation_by_user_course_id_is_default_has_rule(user_id, course_id)
+            msg = ""
+            if has_rule:
+                if is_default:
+                    msg = "{}, Your lecturer has recommended some readings for you, do you want to take a look now? ".format(
+                            self.get_greeting())
+                else:
+                    msg = "{}, Would you like to read some key readings that are suggested by the lecturer? ".format(
+                            self.get_greeting())
+                dispatcher.utter_message(text=msg,
+                    attachment=get_caurosel_dispatch_message(recommended_carousel))
+
+                dispatcher.utter_button_message("You can also choose any question below or type your question",
+                                         buttons)
+            else:
+                dispatcher.utter_button_message(
+                    "{}, fellas! How can I help you today? Choose any below or type your questions: ".format(self.get_greeting()),
+                    buttons)
 
         return []
 
@@ -545,7 +587,7 @@ class ActionGetTaskMissedLessonN(Action):
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        
+
         lesson_n_value = next(tracker.get_latest_entity_values('CARDINAL'),
                               None)
         if (lesson_n_value is None):
@@ -585,7 +627,7 @@ class ActionGetTaskMissedLessonN(Action):
             task_missed_section_id_list = []
             for x in query_result:
                 task_missed_section_id_list.append(x[0])
-            
+
             print(task_missed_section_id_list)
             cms = get_course_modules(course_id, task_missed_section_id_list)
             print(cms)
@@ -3184,13 +3226,11 @@ class ActionGetMaterialRecommendation(Action):
 
     @classmethod
     def get_user_quiz_grade(cls, user_id, course_oid):
-        sql_query = "select d.grade \
-					from mdl_course_modules a \
-					left join mdl_modules b on a.module = b.id \
-					left join mdl_quiz c on a.instance = c.id \
-					left join mdl_quiz_grades d on c.id = d.quiz and a.instance = d.quiz \
-					where a.id = {} \
-					and d.userid = {}".format(course_oid, user_id)
+        sql_query = """
+SELECT rawgrade FROM moodle.mdl_grade_grades gg
+WHERE gg.itemid = {}
+AND gg.userid = {}
+""".format(course_oid, user_id)
 
         query_result = sql_query_result(sql_query)
 
@@ -3242,9 +3282,6 @@ class ActionGetMaterialRecommendation(Action):
         recommendation_op = recommendation_clause["op"]
         if (recommendation_op is None):
             # logging.error("recommendation_op is null")
-            if (recommendation_clause["oid"].lstrip('-').isdigit() == False):
-                logging.error("Error in oid")
-                return False
             oid = int(recommendation_clause["oid"])
             check_op = recommendation_clause["check_op"]
             check_value = recommendation_clause["check_value"]
@@ -3324,22 +3361,24 @@ class ActionGetMaterialRecommendation(Action):
                 return None
 
     @classmethod
-    def get_carousel_recommendation_by_user_course_id(cls, user_id:int, course_id:int) -> List:
+    def get_carousel_recommendation_by_user_course_id_is_default_has_rule(cls, user_id:int, course_id:int)->(List, bool, bool):
+        is_default = False
         caurosel_elements = []
         # buttons = []
 
         course_recommendation_json_str = cls.get_recommendation_rule_json(
             course_id)
 
-
         if (course_recommendation_json_str == -1):
-            return []
+            return (None, False, False)
 
         # Extract json
         course_recommendation_json = json.loads(course_recommendation_json_str)
+        default_cm_ids = course_recommendation_json["default_cm_ids"]
+        course_recommendation_json = course_recommendation_json["rules"]
+
         # logging.error(course_recommendation_json)
         # logging.error(len(course_recommendation_json))
-        course_recommendation_json_tmp = course_recommendation_json[0]
         for course_recommendation_json_tmp in course_recommendation_json:
             course_recommendation_json_tmp_if_clause = \
                 course_recommendation_json_tmp["if"]
@@ -3352,44 +3391,25 @@ class ActionGetMaterialRecommendation(Action):
                     course_recommendation_json_tmp_if_clause, user_id,
                     course_id)))
             if (course_recommendation_json_tmp_if_clause_eval_result == True):
-                for course_oid_tmp in course_recommendation_json_tmp_then_clause:
-                    if (course_oid_tmp.isdigit() == True):
-                        course_oid_tmp_int = int(course_oid_tmp)
-                        course_oid_tmp_module_type = cls.get_course_oid_module_type(
-                            course_oid_tmp_int)
-                        if (not (course_oid_tmp_module_type is None)):
-                            course_oid_tmp_module_name = cls.get_course_oid_name(
-                                course_oid_tmp, course_oid_tmp_module_type)
-                            if (not (course_oid_tmp_module_name is None)):
-                                recommendation_name = course_oid_tmp_module_name
-                                recommendation_type = course_oid_tmp_module_type
-                                recommendation_link_url = "/mod/{}/view.php?id={}".format(
-                                    recommendation_type, course_oid_tmp_int)
+                cm_ids = [int(x) for x in
+                          course_recommendation_json_tmp_then_clause]
+                caursoel_data_objects = get_course_modules(course_id, cm_ids)
+                caurosel_elements += get_caurosel_elements_from_cms(
+                    caursoel_data_objects)
 
-                                caurosel_element = {
-                                    "title": recommendation_name,
-                                    # "image_url": "https://cdn.lihkg.com/assets/img/icon.png",
-                                    "image_url": "",
-                                    "buttons": [{
-                                        "title": "Go to Link url",
-                                        "url": recommendation_link_url,
-                                        "type": "web_url"
-                                    }]
-                                }
-                                caurosel_elements.append(caurosel_element)
+        if len(caurosel_elements) == 0:
+            is_default = True
+            cm_ids = [int(x) for x in
+                      default_cm_ids]
+            caursoel_data_objects = get_course_modules(course_id, cm_ids)
+            caurosel_elements += get_caurosel_elements_from_cms(
+                caursoel_data_objects)
 
-                                '''
-                                button = {
-                                            "title": recommendation_name,
-                                            "payload": recommendation_link_url
-                                         }
+        return (caurosel_elements, is_default, True)
 
-                                buttons.append(button)
-                                '''
-
-
-
-        return caurosel_elements
+    @classmethod
+    def get_carousel_recommendation_by_user_course_id(cls, user_id:int, course_id:int) -> List:
+        return cls.get_carousel_recommendation_by_user_course_id_is_default_has_rule(user_id, course_id)[0]
 
     def run(self, dispatcher: CollectingDispatcher,
         tracker: Tracker,
@@ -3514,26 +3534,6 @@ def get_course_modules_by_section_id(course_id, section_id):
         if cm["visible"] == 1:
             ret.append(cm)
     return ret
-
-
-def get_course_modules(course_id, cm_ids: List[int]):
-    r = request_course_modules(course_id)
-
-    cms = json.loads(r.text)
-
-    ret = []
-    # trans the section and cm
-    for section in cms:
-        for cm in section["modules"]:
-            if cm["id"] in cm_ids and ( cm["visible"] == 1 or cm["modname"] == "lesson" ):
-                cm["section"] = section
-
-                if cm["modname"] == "lesson":
-                    cm["url"] = "/course/view.php?id={}#section-{}".format(course_id, cm["section"]["section"])
-                ret.append(cm)
-
-    return ret
-
 
 def requst_sections_with_course_modules(course_id, section_id):
     options = {
@@ -4107,3 +4107,5 @@ WHERE
 
             dispatcher.utter_message(text=result)
         return []
+
+print(ActionGetMaterialRecommendation.get_carousel_recommendation_by_user_course_id(226, 24))
